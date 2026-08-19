@@ -340,6 +340,13 @@
     margin-bottom:9px;
     position:relative;
   }
+  .summary-card{
+    background:var(--paper-2);
+    border:1px solid var(--navy);
+    border-left:4px solid var(--navy);
+    margin-top:4px;
+  }
+  .summary-card .note-meta{color:var(--navy);font-weight:700;}
   .note-meta{
     font-size:11px;
     color:var(--ink-soft);
@@ -677,7 +684,7 @@
     </div>
     <div class="detail-actions">
       <button id="editStudentBtn">✏️ 정보 수정</button>
-      <button id="mergeNotesBtn" style="display:none;">🔗 기록 통합하기</button>
+      <button id="mergeNotesBtn" style="display:none;">🔗 종합 기록 업데이트</button>
     </div>
 
     <button class="add-note-btn" id="addNoteBtn">＋ 특이사항 추가</button>
@@ -762,6 +769,7 @@
 <script>
 let roster = [];        // [{id, grade, classNum, rollNum, name, photo}]
 let notes = {};         // { studentId: [{id, date, time, content}] }
+let summaries = {};     // { studentId: { content, updatedDate, updatedTime } } - 개별 기록을 지우지 않고 모아 보여주는 종합 칸
 let currentStudentId = null;
 let editingStudentId = null;   // set when editing existing student
 let editingNoteId = null;      // set when editing existing note
@@ -838,14 +846,18 @@ async function loadData(){
   roster = rosterRaw ? JSON.parse(rosterRaw) : [];
   const notesRaw = await safeGet('notes');
   notes = notesRaw ? JSON.parse(notesRaw) : {};
+  const summariesRaw = await safeGet('summaries');
+  summaries = summariesRaw ? JSON.parse(summariesRaw) : {};
 
   // 이전 버전에서 자동으로 채워졌던 예시 명단을 한 번만 정리 (이제는 엑셀로 직접 올리는 방식)
   const schemaVersion = await safeGet('schemaVersion');
   if(schemaVersion !== 'v2'){
     roster = [];
     notes = {};
+    summaries = {};
     await saveRoster();
     await saveNotes();
+    await saveSummaries();
     lsSet('schemaVersion', 'v2');
   }
 
@@ -857,6 +869,10 @@ async function saveRoster(){
 }
 async function saveNotes(){
   const ok = lsSet('notes', JSON.stringify(notes));
+  if(!ok) showToast('저장 중 문제가 발생했어요 (브라우저 저장 공간을 확인해주세요)');
+}
+async function saveSummaries(){
+  const ok = lsSet('summaries', JSON.stringify(summaries));
   if(!ok) showToast('저장 중 문제가 발생했어요 (브라우저 저장 공간을 확인해주세요)');
 }
 
@@ -1073,23 +1089,20 @@ $('#mergeNotesBtn').addEventListener('click', async ()=>{
     return dtA.localeCompare(dtB);
   });
   if(arr.length < 2) return;
-  if(!confirm(`이 학생의 기록 ${arr.length}건을 하나로 합칠까요? 개별 기록은 사라지고, 날짜별로 정리된 기록 1건만 남아요.`)) return;
 
   const mergedContent = arr
     .map(n => `[${formatDate(n.date)}${n.time ? ' ' + n.time : ''}] ${n.content}`)
     .join('\n');
 
-  notes[currentStudentId] = [{
-    id: uid(),
-    date: todayStr(),
-    time: nowStr(),
-    content: mergedContent
-  }];
+  summaries[currentStudentId] = {
+    content: mergedContent,
+    updatedDate: todayStr(),
+    updatedTime: nowStr()
+  };
 
-  await saveNotes();
+  await saveSummaries();
   renderNotes();
-  render();
-  showToast('기록을 통합했어요');
+  showToast('종합 기록을 업데이트했어요');
 });
 
 function renderNotes(){
@@ -1100,11 +1113,14 @@ function renderNotes(){
     return dtB.localeCompare(dtA);
   });
   $('#mergeNotesBtn').style.display = arr.length >= 2 ? 'inline-block' : 'none';
-  if(arr.length === 0){
+
+  list.innerHTML = '';
+
+  if(arr.length === 0 && !summaries[currentStudentId]){
     list.innerHTML = '<div class="no-notes">아직 기록된 특이사항이 없어요</div>';
     return;
   }
-  list.innerHTML = '';
+
   arr.forEach(n=>{
     const item = document.createElement('div');
     item.className = 'note-item';
@@ -1126,6 +1142,28 @@ function renderNotes(){
     });
     list.appendChild(item);
   });
+
+  // 종합 칸: 개별 기록은 그대로 두고, 맨 마지막에 모아서 보여주는 요약 카드
+  const summary = summaries[currentStudentId];
+  if(summary){
+    const card = document.createElement('div');
+    card.className = 'note-item summary-card';
+    card.innerHTML = `
+      <div class="note-meta">
+        <span>📝 종합 기록 · 마지막 업데이트 ${formatDate(summary.updatedDate)} ${summary.updatedTime || ''}</span>
+        <button class="del" id="deleteSummaryBtn">🗑</button>
+      </div>
+      <div class="note-content">${escapeHtml(summary.content)}</div>
+    `;
+    card.querySelector('#deleteSummaryBtn').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('종합 기록만 지울까요? (개별 기록은 그대로 남아요)')) return;
+      delete summaries[currentStudentId];
+      await saveSummaries();
+      renderNotes();
+    });
+    list.appendChild(card);
+  }
 }
 
 function formatDate(dateStr){
