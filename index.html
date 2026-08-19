@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>학생 기록장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF6EF;
+    --paper-2:#F1EBDD;
+    --ink:#26313A;
+    --ink-soft:#5B6670;
+    --navy:#2E4057;
+    --navy-deep:#1D2B3D;
+    --coral:#E2793D;
+    --coral-soft:#F6E1CC;
+    --line:#DDD3BE;
+    --danger:#C1533A;
+    --radius:14px;
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:96px;
+  }
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:var(--navy-deep);
+    color:#fff;
+    padding:18px 16px 14px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+  }
+  header h1{
+    font-family:'Noto Serif KR',serif;
+    font-size:19px;
+    margin:0 0 2px;
+    font-weight:700;
+    letter-spacing:-0.2px;
+  }
+  header .sub{
+    font-size:12px;
+    color:#B9C4D0;
+    margin-bottom:12px;
+  }
+  .search-wrap{
+    display:flex;
+    gap:8px;
+  }
+  .search-wrap input{
+    flex:1;
+    border:none;
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:14px;
+    background:rgba(255,255,255,0.12);
+    color:#fff;
+  }
+  .search-wrap input::placeholder{color:#9FACBB;}
+  .count-pill{
+    font-size:11px;
+    color:#B9C4D0;
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:20px;
+    padding:0 10px;
+    display:flex;
+    align-items:center;
+    white-space:nowrap;
+  }
+
+  .filter-chips{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    margin-top:10px;
+    padding-bottom:2px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .filter-chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;
+    font-size:12.5px;
+    font-weight:600;
+    color:#C9D2DB;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:20px;
+    padding:6px 13px;
+    white-space:nowrap;
+    cursor:pointer;
+  }
+  .chip.active{
+    background:var(--coral);
+    border-color:var(--coral);
+    color:#fff;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:10px;
+    padding:14px;
+  }
+  .empty{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+  }
+  .empty .big{
+    font-family:'Noto Serif KR',serif;
+    font-size:16px;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    position:relative;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:active{transform:scale(0.97);}
+  .photo{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    background:var(--paper-2);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    margin-bottom:8px;
+    border:2px solid var(--navy);
+    color:var(--navy);
+    font-weight:700;
+    font-size:20px;
+    font-family:'Noto Serif KR',serif;
+    flex-shrink:0;
+  }
+  .photo img{width:100%;height:100%;object-fit:cover;}
+  .card .name{font-weight:600;font-size:14px;}
+  .card .num{
+    font-size:11px;
+    color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0.3px;
+    margin-top:1px;
+  }
+  .note-badge{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:var(--coral);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+    min-width:18px;
+    height:18px;
+    border-radius:9px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 5px;
+  }
+
+  .fab{
+    position:fixed;
+    right:18px;
+    bottom:22px;
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    font-size:28px;
+    line-height:1;
+    box-shadow:0 6px 16px rgba(29,43,61,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:15;
+  }
+  .fab:active{transform:scale(0.94);}
+
+  /* Modal */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,25,30,0.45);
+    z-index:30;
+    display:flex;
+    align-items:flex-end;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .sheet{
+    background:var(--paper);
+    width:100%;
+    max-height:88vh;
+    border-radius:20px 20px 0 0;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+    overflow-y:auto;
+    transform:translateY(16px);
+    transition:transform .2s ease;
+  }
+  .overlay.show .sheet{transform:translateY(0);}
+  .sheet-handle{
+    width:36px;height:4px;background:var(--line);border-radius:2px;
+    margin:0 auto 14px;
+  }
+  .sheet h2{
+    font-family:'Noto Serif KR',serif;
+    font-size:17px;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .close-x{
+    background:none;border:none;font-size:20px;color:var(--ink-soft);cursor:pointer;padding:4px;
+  }
+
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin:14px 0 6px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=date], input[type=time], textarea{
+    width:100%;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:10px;
+    padding:11px 12px;
+    font-size:15px;
+    font-family:inherit;
+    color:var(--ink);
+  }
+  textarea{min-height:90px;resize:vertical;}
+  input:focus, textarea:focus{outline:2px solid var(--navy);outline-offset:1px;}
+
+  .photo-picker{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .photo-preview{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--paper-2);
+    border:2px dashed var(--line);
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;color:var(--ink-soft);font-size:11px;flex-shrink:0;
+  }
+  .photo-preview img{width:100%;height:100%;object-fit:cover;}
+  .photo-btn{
+    border:1px solid var(--navy);
+    color:var(--navy);
+    background:#fff;
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:13px;
+    font-weight:600;
+  }
+
+  .btn-row{display:flex;gap:8px;margin-top:20px;}
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:active{background:var(--navy-deep);}
+  .btn-ghost{background:var(--paper-2);color:var(--ink-soft);}
+  .btn-danger-text{
+    background:none;border:none;color:var(--danger);font-size:13px;
+    padding:6px 4px;cursor:pointer;font-weight:600;
+  }
+
+  /* Detail sheet */
+  .detail-header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:6px;
+  }
+  .detail-header .photo{margin-bottom:0;width:52px;height:52px;font-size:17px;}
+  .detail-header .info .name{font-size:16px;font-weight:700;}
+  .detail-header .info .num{font-size:12px;color:var(--ink-soft);}
+  .detail-actions{
+    display:flex;gap:14px;margin:10px 0 16px;
+    font-size:12px;
+  }
+  .detail-actions button{
+    background:none;border:none;color:var(--ink-soft);
+    font-weight:600;padding:0;cursor:pointer;
+  }
+
+  .add-note-btn{
+    width:100%;
+    border:1.5px dashed var(--navy);
+    background:#fff;
+    color:var(--navy);
+    border-radius:10px;
+    padding:11px;
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:16px;
+  }
+
+  .note-item{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:4px solid var(--coral);
+    border-radius:10px;
+    padding:11px 12px;
+    margin-bottom:9px;
+    position:relative;
+  }
+  .note-meta{
+    font-size:11px;
+    color:var(--ink-soft);
+    font-weight:600;
+    margin-bottom:4px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .note-meta .del{
+    background:none;border:none;color:#B9AF9C;font-size:16px;cursor:pointer;padding:0 2px;
+  }
+  .note-content{
+    font-size:14px;
+    line-height:1.5;
+    white-space:pre-wrap;
+  }
+  .no-notes{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13px;
+    padding:30px 10px;
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:100px;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--navy-deep);
+    color:#fff;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:all .2s ease;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* Batch photo assignment */
+  .batch-fab{
+    position:fixed;
+    right:18px;
+    bottom:88px;
+    width:48px;height:48px;
+    border-radius:50%;
+    background:#fff;
+    color:var(--navy);
+    border:1.5px solid var(--navy);
+    font-size:19px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 16px rgba(29,43,61,0.2);
+    z-index:15;
+  }
+  .batch-fab:active{transform:scale(0.94);}
+
+  .batch-target{
+    display:flex;align-items:center;gap:10px;
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:9px 10px;margin-bottom:10px;
+  }
+  .batch-target .photo{margin-bottom:0;width:42px;height:42px;font-size:14px;flex-shrink:0;}
+  .batch-target-info{flex:1;min-width:0;}
+  .batch-target-label{font-size:10.5px;color:var(--ink-soft);}
+  .batch-target-name{font-size:14.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #batchJumpSelect{
+    border:1px solid var(--line);border-radius:8px;font-size:11px;
+    padding:5px 4px;max-width:92px;background:#fff;color:var(--ink-soft);flex-shrink:0;
+  }
+
+  .zoom-controls{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .zoom-controls button{
+    width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+    background:#fff;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0;
+  }
+  .zoom-controls #zoomLabel{font-size:11.5px;color:var(--ink-soft);min-width:36px;text-align:center;}
+  .mode-toggle{
+    border:1px solid var(--navy) !important;
+    color:var(--navy);
+    background:#fff;
+    border-radius:16px !important;
+    padding:0 12px !important;
+    font-size:12px !important;
+    font-weight:700 !important;
+    width:auto !important;
+    height:30px !important;
+  }
+  .mode-toggle.active{background:var(--coral);border-color:var(--coral) !important;color:#fff;}
+  .batch-progress{margin-left:auto;font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+
+  .crop-stage{
+    position:relative;
+    overflow:auto;
+    max-height:48vh;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:#20242A;
+    touch-action:pan-x pan-y;
+  }
+  .crop-stage canvas{display:block;}
+  .crop-box{
+    position:absolute;
+    border:2px solid var(--coral);
+    background:rgba(226,121,61,0.25);
+    pointer-events:none;
+  }
+  .batch-hint{font-size:11.5px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+  .batch-page-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .batch-page-nav span{font-size:12px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📓 학생 기록장</h1>
+  <div class="sub">특이사항을 그때그때 기록해두세요</div>
+  <div class="search-wrap">
+    <input id="searchInput" type="text" placeholder="이름 또는 학번 검색">
+    <div class="count-pill" id="countPill">0명</div>
+  </div>
+  <div class="filter-chips" id="classFilters"></div>
+</header>
+
+<div id="grid" class="grid"></div>
+<div id="emptyState" class="empty" style="display:none;">
+  <div class="big">등록된 학생이 없어요</div>
+  <div>오른쪽 아래 + 버튼으로 학생을 추가해보세요</div>
+</div>
+
+<button class="batch-fab" id="batchPhotoFab" title="사진 일괄 등록">📷</button>
+<button class="fab" id="addStudentFab">＋</button>
+
+<!-- 학생 추가/수정 시트 -->
+<div class="overlay" id="studentOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2><span id="studentSheetTitle">학생 추가</span><button class="close-x" data-close="studentOverlay">✕</button></h2>
+
+    <label>사진 (선택)</label>
+    <div class="photo-picker">
+      <div class="photo-preview" id="photoPreview">사진</div>
+      <button type="button" class="photo-btn" id="photoBtn">사진 선택</button>
+      <input type="file" id="photoInput" accept="image/*" style="display:none;">
+    </div>
+
+    <label>학년 / 반 / 번호</label>
+    <div style="display:flex;gap:8px;">
+      <select id="studentGrade" style="flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 8px;font-size:15px;">
+        <option value="1">1학년</option>
+        <option value="2">2학년</option>
+        <option value="3">3학년</option>
+      </select>
+      <input type="text" id="studentClass" inputmode="numeric" placeholder="반" style="flex:1;">
+      <input type="text" id="studentRoll" inputmode="numeric" placeholder="번호" style="flex:1;">
+    </div>
+
+    <label>이름</label>
+    <input type="text" id="studentName" placeholder="예: 홍길동">
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" data-close="studentOverlay">취소</button>
+      <button class="btn btn-primary" id="saveStudentBtn">저장</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;">
+      <button class="btn-danger-text" id="deleteStudentBtn" style="display:none;">이 학생 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 학생 상세 / 특이사항 시트 -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2><span>학생 기록</span><button class="close-x" data-close="detailOverlay">✕</button></h2>
+
+    <div class="detail-header">
+      <div class="photo" id="detailPhoto"></div>
+      <div class="info">
+        <div class="name" id="detailName"></div>
+        <div class="num" id="detailNum"></div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button id="editStudentBtn">✏️ 정보 수정</button>
+    </div>
+
+    <button class="add-note-btn" id="addNoteBtn">＋ 특이사항 추가</button>
+    <div id="notesList"></div>
+  </div>
+</div>
+
+<!-- 특이사항 추가/수정 시트 -->
+<div class="overlay" id="noteOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2><span id="noteSheetTitle">특이사항 추가</span><button class="close-x" data-close="noteOverlay">✕</button></h2>
+
+    <label>날짜</label>
+    <input type="date" id="noteDate">
+
+    <label>시간</label>
+    <input type="time" id="noteTime">
+
+    <label>내용</label>
+    <textarea id="noteContent" placeholder="어떤 일이 있었는지 적어주세요"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" data-close="noteOverlay">취소</button>
+      <button class="btn btn-primary" id="saveNoteBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 사진 일괄 등록 시트 -->
+<div class="overlay" id="batchOverlay">
+  <div class="sheet" style="max-height:94vh;">
+    <div class="sheet-handle"></div>
+    <h2><span>사진 일괄 등록</span><button class="close-x" data-close="batchOverlay">✕</button></h2>
+
+    <div id="batchStep1">
+      <div class="batch-hint" style="margin-top:0;margin-bottom:10px;">한 반 학생들 얼굴이 모여있는 PDF나 사진을 올리면, 화면에서 얼굴 하나씩 잘라 학생에게 순서대로 배정할 수 있어요. (지금 선택된 반 필터 기준으로 학생 목록을 불러와요)</div>
+      <label style="margin-top:0;">학급 사진 파일 (PDF 또는 이미지)</label>
+      <input type="file" id="batchFileInput" accept="application/pdf,image/*">
+    </div>
+
+    <div id="batchStep2" style="display:none;">
+      <div class="batch-page-nav" id="batchPageNav" style="display:none;">
+        <button type="button" class="photo-btn" id="prevPageBtn">◀ 이전 쪽</button>
+        <span id="pageIndicator"></span>
+        <button type="button" class="photo-btn" id="nextPageBtn">다음 쪽 ▶</button>
+      </div>
+
+      <div class="batch-target">
+        <div class="photo" id="batchTargetPhoto"></div>
+        <div class="batch-target-info">
+          <div class="batch-target-label">지금 배정할 학생</div>
+          <div class="batch-target-name" id="batchTargetName">-</div>
+        </div>
+        <select id="batchJumpSelect"></select>
+      </div>
+
+      <div class="zoom-controls">
+        <button type="button" id="zoomOutBtn">－</button>
+        <span id="zoomLabel">100%</span>
+        <button type="button" id="zoomInBtn">＋</button>
+        <button type="button" class="mode-toggle" id="modeToggleBtn">🖐 이동 모드</button>
+        <span class="batch-progress" id="batchProgress"></span>
+      </div>
+
+      <div class="crop-stage" id="cropStage">
+        <canvas id="pageCanvas"></canvas>
+        <div class="crop-box" id="cropBox" style="display:none;"></div>
+      </div>
+      <div class="batch-hint">스크롤해서 얼굴을 찾은 뒤 "✂️ 선택"으로 바꾸고, 얼굴 위를 드래그해서 네모를 그리면 바로 저장되고 다음 학생으로 넘어가요.</div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="skipStudentBtn">건너뛰기</button>
+        <button class="btn btn-primary" data-close="batchOverlay">완료</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let roster = [];        // [{id, grade, classNum, rollNum, name, photo}]
+let notes = {};         // { studentId: [{id, date, time, content}] }
+let currentStudentId = null;
+let editingStudentId = null;   // set when editing existing student
+let editingNoteId = null;      // set when editing existing note
+let pendingPhotoData = null;
+let activeFilter = 'all';      // 'all' or 'grade-classNum'
+
+function studentNumber(s){
+  return `${s.grade}${String(s.classNum).padStart(2,'0')}${String(s.rollNum).padStart(2,'0')}`;
+}
+function studentLabel(s){
+  return `${s.grade}학년 ${s.classNum}반 ${s.rollNum}번`;
+}
+function classKey(s){
+  return `${s.grade}-${s.classNum}`;
+}
+
+const $ = (sel) => document.querySelector(sel);
+const overlayIds = ['studentOverlay','detailOverlay','noteOverlay'];
+
+function showToast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function openOverlay(id){
+  $('#'+id).classList.add('show');
+}
+function closeOverlay(id){
+  $('#'+id).classList.remove('show');
+}
+document.querySelectorAll('[data-close]').forEach(btn=>{
+  btn.addEventListener('click', ()=>closeOverlay(btn.dataset.close));
+});
+overlayIds.forEach(id=>{
+  $('#'+id).addEventListener('click', (e)=>{
+    if(e.target.id === id) closeOverlay(id);
+  });
+});
+
+function uid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+// 2026학년도 학적 현황(2026.7.1. 기준) - 1학년 6,7반 / 3학년 1,2,3반
+const SEED_STUDENTS = [
+  {"grade":1,"classNum":6,"rollNum":1,"name":"곽도원"},
+  {"grade":1,"classNum":6,"rollNum":2,"name":"권윤후"},
+  {"grade":1,"classNum":6,"rollNum":3,"name":"김강민"},
+  {"grade":1,"classNum":6,"rollNum":4,"name":"김래오"},
+  {"grade":1,"classNum":6,"rollNum":5,"name":"김선우"},
+  {"grade":1,"classNum":6,"rollNum":6,"name":"김아준"},
+  {"grade":1,"classNum":6,"rollNum":7,"name":"김지오"},
+  {"grade":1,"classNum":6,"rollNum":8,"name":"박승주"},
+  {"grade":1,"classNum":6,"rollNum":9,"name":"박시현"},
+  {"grade":1,"classNum":6,"rollNum":10,"name":"신수하"},
+  {"grade":1,"classNum":6,"rollNum":11,"name":"신효찬"},
+  {"grade":1,"classNum":6,"rollNum":12,"name":"유예성"},
+  {"grade":1,"classNum":6,"rollNum":13,"name":"윤성민"},
+  {"grade":1,"classNum":6,"rollNum":14,"name":"이건우"},
+  {"grade":1,"classNum":6,"rollNum":15,"name":"이유민"},
+  {"grade":1,"classNum":6,"rollNum":16,"name":"이은산"},
+  {"grade":1,"classNum":6,"rollNum":17,"name":"이준영"},
+  {"grade":1,"classNum":6,"rollNum":18,"name":"이현규"},
+  {"grade":1,"classNum":6,"rollNum":19,"name":"전지훈"},
+  {"grade":1,"classNum":6,"rollNum":20,"name":"정연우"},
+  {"grade":1,"classNum":6,"rollNum":21,"name":"최준현"},
+  {"grade":1,"classNum":6,"rollNum":22,"name":"하태서"},
+  {"grade":1,"classNum":6,"rollNum":23,"name":"한시찬"},
+  {"grade":1,"classNum":7,"rollNum":1,"name":"강주호"},
+  {"grade":1,"classNum":7,"rollNum":2,"name":"김도군"},
+  {"grade":1,"classNum":7,"rollNum":3,"name":"김도윤"},
+  {"grade":1,"classNum":7,"rollNum":4,"name":"김산"},
+  {"grade":1,"classNum":7,"rollNum":5,"name":"김선오"},
+  {"grade":1,"classNum":7,"rollNum":6,"name":"김용현"},
+  {"grade":1,"classNum":7,"rollNum":7,"name":"김지오"},
+  {"grade":1,"classNum":7,"rollNum":8,"name":"김지후"},
+  {"grade":1,"classNum":7,"rollNum":9,"name":"김태후"},
+  {"grade":1,"classNum":7,"rollNum":10,"name":"김형준"},
+  {"grade":1,"classNum":7,"rollNum":11,"name":"박도현"},
+  {"grade":1,"classNum":7,"rollNum":12,"name":"박민찬"},
+  {"grade":1,"classNum":7,"rollNum":13,"name":"송유빈"},
+  {"grade":1,"classNum":7,"rollNum":14,"name":"송은성"},
+  {"grade":1,"classNum":7,"rollNum":16,"name":"오태규"},
+  {"grade":1,"classNum":7,"rollNum":17,"name":"윤서후"},
+  {"grade":1,"classNum":7,"rollNum":18,"name":"이라온"},
+  {"grade":1,"classNum":7,"rollNum":19,"name":"이민준"},
+  {"grade":1,"classNum":7,"rollNum":20,"name":"임윤호"},
+  {"grade":1,"classNum":7,"rollNum":21,"name":"전연우"},
+  {"grade":1,"classNum":7,"rollNum":22,"name":"조건우"},
+  {"grade":1,"classNum":7,"rollNum":23,"name":"최도현"},
+  {"grade":1,"classNum":7,"rollNum":24,"name":"최예성"},
+  {"grade":3,"classNum":1,"rollNum":1,"name":"강동주"},
+  {"grade":3,"classNum":1,"rollNum":2,"name":"경준휘"},
+  {"grade":3,"classNum":1,"rollNum":3,"name":"김동현"},
+  {"grade":3,"classNum":1,"rollNum":4,"name":"김류원"},
+  {"grade":3,"classNum":1,"rollNum":5,"name":"김상현"},
+  {"grade":3,"classNum":1,"rollNum":6,"name":"김준현"},
+  {"grade":3,"classNum":1,"rollNum":7,"name":"김하람"},
+  {"grade":3,"classNum":1,"rollNum":8,"name":"루승현"},
+  {"grade":3,"classNum":1,"rollNum":9,"name":"박지우"},
+  {"grade":3,"classNum":1,"rollNum":10,"name":"백시우"},
+  {"grade":3,"classNum":1,"rollNum":11,"name":"양진혁"},
+  {"grade":3,"classNum":1,"rollNum":12,"name":"용지민"},
+  {"grade":3,"classNum":1,"rollNum":13,"name":"용호영"},
+  {"grade":3,"classNum":1,"rollNum":14,"name":"유능한"},
+  {"grade":3,"classNum":1,"rollNum":15,"name":"윤태희"},
+  {"grade":3,"classNum":1,"rollNum":16,"name":"이동구"},
+  {"grade":3,"classNum":1,"rollNum":17,"name":"이민우"},
+  {"grade":3,"classNum":1,"rollNum":18,"name":"이율"},
+  {"grade":3,"classNum":1,"rollNum":19,"name":"이진서"},
+  {"grade":3,"classNum":1,"rollNum":20,"name":"임주안"},
+  {"grade":3,"classNum":1,"rollNum":21,"name":"전형기"},
+  {"grade":3,"classNum":1,"rollNum":22,"name":"조현진"},
+  {"grade":3,"classNum":1,"rollNum":23,"name":"채희승"},
+  {"grade":3,"classNum":1,"rollNum":24,"name":"천준서"},
+  {"grade":3,"classNum":1,"rollNum":25,"name":"함준식"},
+  {"grade":3,"classNum":2,"rollNum":1,"name":"강규빈"},
+  {"grade":3,"classNum":2,"rollNum":2,"name":"고승희"},
+  {"grade":3,"classNum":2,"rollNum":3,"name":"김우빈"},
+  {"grade":3,"classNum":2,"rollNum":5,"name":"김찬"},
+  {"grade":3,"classNum":2,"rollNum":6,"name":"김찬우"},
+  {"grade":3,"classNum":2,"rollNum":7,"name":"김태환"},
+  {"grade":3,"classNum":2,"rollNum":8,"name":"박성수"},
+  {"grade":3,"classNum":2,"rollNum":9,"name":"박찬의"},
+  {"grade":3,"classNum":2,"rollNum":10,"name":"서성원"},
+  {"grade":3,"classNum":2,"rollNum":11,"name":"손영주"},
+  {"grade":3,"classNum":2,"rollNum":12,"name":"윤지훈"},
+  {"grade":3,"classNum":2,"rollNum":13,"name":"이시율"},
+  {"grade":3,"classNum":2,"rollNum":14,"name":"이용우"},
+  {"grade":3,"classNum":2,"rollNum":15,"name":"이우진"},
+  {"grade":3,"classNum":2,"rollNum":16,"name":"이지율"},
+  {"grade":3,"classNum":2,"rollNum":17,"name":"전태양"},
+  {"grade":3,"classNum":2,"rollNum":18,"name":"정여준"},
+  {"grade":3,"classNum":2,"rollNum":19,"name":"정태건"},
+  {"grade":3,"classNum":2,"rollNum":20,"name":"조민기"},
+  {"grade":3,"classNum":2,"rollNum":21,"name":"조성민"},
+  {"grade":3,"classNum":2,"rollNum":22,"name":"채현호"},
+  {"grade":3,"classNum":2,"rollNum":23,"name":"최원욱"},
+  {"grade":3,"classNum":2,"rollNum":24,"name":"홍기윤"},
+  {"grade":3,"classNum":2,"rollNum":25,"name":"김민준"},
+  {"grade":3,"classNum":3,"rollNum":1,"name":"강리우"},
+  {"grade":3,"classNum":3,"rollNum":2,"name":"강재서"},
+  {"grade":3,"classNum":3,"rollNum":3,"name":"권민율"},
+  {"grade":3,"classNum":3,"rollNum":4,"name":"김기훈"},
+  {"grade":3,"classNum":3,"rollNum":5,"name":"김서우"},
+  {"grade":3,"classNum":3,"rollNum":6,"name":"김용민"},
+  {"grade":3,"classNum":3,"rollNum":7,"name":"김지성"},
+  {"grade":3,"classNum":3,"rollNum":8,"name":"배강준"},
+  {"grade":3,"classNum":3,"rollNum":9,"name":"서정우"},
+  {"grade":3,"classNum":3,"rollNum":10,"name":"송승환"},
+  {"grade":3,"classNum":3,"rollNum":11,"name":"신원하"},
+  {"grade":3,"classNum":3,"rollNum":12,"name":"심유찬"},
+  {"grade":3,"classNum":3,"rollNum":13,"name":"오승민"},
+  {"grade":3,"classNum":3,"rollNum":14,"name":"이민재"},
+  {"grade":3,"classNum":3,"rollNum":15,"name":"이서율"},
+  {"grade":3,"classNum":3,"rollNum":16,"name":"이승준"},
+  {"grade":3,"classNum":3,"rollNum":17,"name":"이시원"},
+  {"grade":3,"classNum":3,"rollNum":18,"name":"이재경"},
+  {"grade":3,"classNum":3,"rollNum":19,"name":"이태민"},
+  {"grade":3,"classNum":3,"rollNum":20,"name":"장민성"},
+  {"grade":3,"classNum":3,"rollNum":21,"name":"전승원"},
+  {"grade":3,"classNum":3,"rollNum":22,"name":"정휘원"},
+  {"grade":3,"classNum":3,"rollNum":23,"name":"조인성"},
+  {"grade":3,"classNum":3,"rollNum":24,"name":"주서진"},
+  {"grade":3,"classNum":3,"rollNum":25,"name":"황지후"}
+];
+
+// ---------- Storage ----------
+async function loadData(){
+  try{
+    const r = await window.storage.get('roster');
+    roster = r && r.value ? JSON.parse(r.value) : [];
+  }catch(e){ roster = []; }
+  try{
+    const n = await window.storage.get('notes');
+    notes = n && n.value ? JSON.parse(n.value) : {};
+  }catch(e){ notes = {}; }
+
+  // 최초 실행 시 학적 현황(1학년 6,7반 / 3학년 1,2,3반)으로 초기 명단 채우기
+  if(roster.length === 0 && SEED_STUDENTS.length > 0){
+    roster = SEED_STUDENTS.map(s => ({ id: uid(), grade: s.grade, classNum: s.classNum, rollNum: s.rollNum, name: s.name, photo: null }));
+    await saveRoster();
+  }
+
+  render();
+}
+async function saveRoster(){
+  try{
+    await window.storage.set('roster', JSON.stringify(roster));
+  }catch(e){
+    console.error('roster save failed', e);
+    showToast('저장 중 문제가 발생했어요');
+  }
+}
+async function saveNotes(){
+  try{
+    await window.storage.set('notes', JSON.stringify(notes));
+  }catch(e){
+    console.error('notes save failed', e);
+    showToast('저장 중 문제가 발생했어요');
+  }
+}
+
+// ---------- Render ----------
+function renderFilterChips(){
+  const wrap = $('#classFilters');
+  const keys = Array.from(new Set(roster.map(classKey))).sort((a,b)=>{
+    const [ag,ac] = a.split('-').map(Number);
+    const [bg,bc] = b.split('-').map(Number);
+    return ag-bg || ac-bc;
+  });
+
+  // 선택된 필터가 더 이상 존재하지 않으면 전체로 복귀
+  if(activeFilter !== 'all' && !keys.includes(activeFilter)) activeFilter = 'all';
+
+  wrap.innerHTML = '';
+  const allChip = document.createElement('div');
+  allChip.className = 'chip' + (activeFilter==='all' ? ' active' : '');
+  allChip.textContent = `전체 ${roster.length}`;
+  allChip.addEventListener('click', ()=>{ activeFilter='all'; render(); });
+  wrap.appendChild(allChip);
+
+  keys.forEach(key=>{
+    const [g,c] = key.split('-');
+    const count = roster.filter(s=>classKey(s)===key).length;
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeFilter===key ? ' active' : '');
+    chip.textContent = `${g}학년 ${c}반 ${count}`;
+    chip.addEventListener('click', ()=>{ activeFilter = key; render(); });
+    wrap.appendChild(chip);
+  });
+}
+
+function render(){
+  const grid = $('#grid');
+  const empty = $('#emptyState');
+  const q = $('#searchInput').value.trim().toLowerCase();
+
+  renderFilterChips();
+
+  const filtered = roster.filter(s=>{
+    if(activeFilter !== 'all' && classKey(s) !== activeFilter) return false;
+    if(!q) return true;
+    return s.name.toLowerCase().includes(q) || studentNumber(s).includes(q) || String(s.rollNum).includes(q);
+  }).sort((a,b)=> studentNumber(a).localeCompare(studentNumber(b), 'ko', {numeric:true}));
+
+  $('#countPill').textContent = roster.length + '명';
+
+  grid.innerHTML = '';
+  if(filtered.length === 0){
+    empty.style.display = 'block';
+    empty.querySelector('.big').textContent = roster.length === 0 ? '등록된 학생이 없어요' : '검색 결과가 없어요';
+    return;
+  }
+  empty.style.display = 'none';
+
+  filtered.forEach(s=>{
+    const noteCount = (notes[s.id] || []).length;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      ${noteCount > 0 ? `<div class="note-badge">${noteCount}</div>` : ''}
+      <div class="photo">${s.photo ? `<img src="${s.photo}">` : initials(s.name)}</div>
+      <div class="name">${escapeHtml(s.name)}</div>
+      <div class="num">${escapeHtml(studentLabel(s))}</div>
+    `;
+    card.addEventListener('click', ()=>openDetail(s.id));
+    grid.appendChild(card);
+  });
+}
+
+function initials(name){
+  if(!name) return '?';
+  return name.trim().slice(-1);
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---------- Student add/edit ----------
+$('#addStudentFab').addEventListener('click', ()=>{
+  editingStudentId = null;
+  pendingPhotoData = null;
+  $('#studentSheetTitle').textContent = '학생 추가';
+  // 현재 선택된 반 필터가 있으면 기본값으로 채워줌
+  if(activeFilter !== 'all'){
+    const [g,c] = activeFilter.split('-');
+    $('#studentGrade').value = g;
+    $('#studentClass').value = c;
+  } else {
+    $('#studentGrade').value = '1';
+    $('#studentClass').value = '';
+  }
+  $('#studentRoll').value = '';
+  $('#studentName').value = '';
+  $('#photoPreview').innerHTML = '사진';
+  $('#deleteStudentBtn').style.display = 'none';
+  openOverlay('studentOverlay');
+});
+
+$('#photoBtn').addEventListener('click', ()=> $('#photoInput').click());
+$('#photoInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const size = 200;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(size/img.width, size/img.height);
+      const w = img.width*scale, h = img.height*scale;
+      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+      pendingPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+      $('#photoPreview').innerHTML = `<img src="${pendingPhotoData}">`;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+$('#saveStudentBtn').addEventListener('click', async ()=>{
+  const grade = parseInt($('#studentGrade').value, 10);
+  const classNum = parseInt($('#studentClass').value.trim(), 10);
+  const rollNum = parseInt($('#studentRoll').value.trim(), 10);
+  const name = $('#studentName').value.trim();
+  if(!classNum || !rollNum || !name){
+    showToast('반, 번호, 이름을 입력해주세요');
+    return;
+  }
+  if(editingStudentId){
+    const s = roster.find(x=>x.id===editingStudentId);
+    s.grade = grade; s.classNum = classNum; s.rollNum = rollNum; s.name = name;
+    if(pendingPhotoData) s.photo = pendingPhotoData;
+  } else {
+    roster.push({ id: uid(), grade, classNum, rollNum, name, photo: pendingPhotoData || null });
+  }
+  await saveRoster();
+  render();
+  closeOverlay('studentOverlay');
+  showToast('저장했어요');
+});
+
+$('#deleteStudentBtn').addEventListener('click', async ()=>{
+  if(!editingStudentId) return;
+  if(!confirm('이 학생과 모든 기록을 삭제할까요?')) return;
+  roster = roster.filter(s=>s.id !== editingStudentId);
+  delete notes[editingStudentId];
+  await saveRoster();
+  await saveNotes();
+  render();
+  closeOverlay('studentOverlay');
+  closeOverlay('detailOverlay');
+  showToast('삭제했어요');
+});
+
+// ---------- Detail / notes ----------
+function openDetail(studentId){
+  currentStudentId = studentId;
+  const s = roster.find(x=>x.id===studentId);
+  if(!s) return;
+  $('#detailPhoto').innerHTML = s.photo ? `<img src="${s.photo}">` : initials(s.name);
+  $('#detailName').textContent = s.name;
+  $('#detailNum').textContent = studentLabel(s);
+  renderNotes();
+  openOverlay('detailOverlay');
+}
+
+$('#editStudentBtn').addEventListener('click', ()=>{
+  const s = roster.find(x=>x.id===currentStudentId);
+  if(!s) return;
+  editingStudentId = s.id;
+  pendingPhotoData = null;
+  $('#studentSheetTitle').textContent = '학생 정보 수정';
+  $('#studentGrade').value = s.grade;
+  $('#studentClass').value = s.classNum;
+  $('#studentRoll').value = s.rollNum;
+  $('#studentName').value = s.name;
+  $('#photoPreview').innerHTML = s.photo ? `<img src="${s.photo}">` : '사진';
+  $('#deleteStudentBtn').style.display = 'block';
+  openOverlay('studentOverlay');
+});
+
+function renderNotes(){
+  const list = $('#notesList');
+  const arr = (notes[currentStudentId] || []).slice().sort((a,b)=>{
+    const dtA = a.date + ' ' + (a.time||'00:00');
+    const dtB = b.date + ' ' + (b.time||'00:00');
+    return dtB.localeCompare(dtA);
+  });
+  if(arr.length === 0){
+    list.innerHTML = '<div class="no-notes">아직 기록된 특이사항이 없어요</div>';
+    return;
+  }
+  list.innerHTML = '';
+  arr.forEach(n=>{
+    const item = document.createElement('div');
+    item.className = 'note-item';
+    item.innerHTML = `
+      <div class="note-meta">
+        <span>${formatDate(n.date)} ${n.time || ''}</span>
+        <button class="del" data-id="${n.id}">🗑</button>
+      </div>
+      <div class="note-content">${escapeHtml(n.content)}</div>
+    `;
+    item.querySelector('.note-content').addEventListener('click', ()=>openEditNote(n.id));
+    item.querySelector('.del').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm('이 기록을 삭제할까요?')) return;
+      notes[currentStudentId] = notes[currentStudentId].filter(x=>x.id!==n.id);
+      await saveNotes();
+      renderNotes();
+      render();
+    });
+    list.appendChild(item);
+  });
+}
+
+function formatDate(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if(isNaN(d)) return dateStr;
+  const days = ['일','월','화','수','목','금','토'];
+  return `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})`;
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function nowStr(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+$('#addNoteBtn').addEventListener('click', ()=>{
+  editingNoteId = null;
+  $('#noteSheetTitle').textContent = '특이사항 추가';
+  $('#noteDate').value = todayStr();
+  $('#noteTime').value = nowStr();
+  $('#noteContent').value = '';
+  openOverlay('noteOverlay');
+});
+
+function openEditNote(noteId){
+  const n = (notes[currentStudentId]||[]).find(x=>x.id===noteId);
+  if(!n) return;
+  editingNoteId = noteId;
+  $('#noteSheetTitle').textContent = '특이사항 수정';
+  $('#noteDate').value = n.date;
+  $('#noteTime').value = n.time || '';
+  $('#noteContent').value = n.content;
+  openOverlay('noteOverlay');
+}
+
+$('#saveNoteBtn').addEventListener('click', async ()=>{
+  const date = $('#noteDate').value;
+  const time = $('#noteTime').value;
+  const content = $('#noteContent').value.trim();
+  if(!date || !content){
+    showToast('날짜와 내용을 입력해주세요');
+    return;
+  }
+  if(!notes[currentStudentId]) notes[currentStudentId] = [];
+  if(editingNoteId){
+    const n = notes[currentStudentId].find(x=>x.id===editingNoteId);
+    n.date = date; n.time = time; n.content = content;
+  } else {
+    notes[currentStudentId].push({ id: uid(), date, time, content });
+  }
+  await saveNotes();
+  renderNotes();
+  render();
+  closeOverlay('noteOverlay');
+  showToast('저장했어요');
+});
+
+$('#searchInput').addEventListener('input', render);
+
+// ---------- Batch photo assignment (PDF/이미지에서 얼굴 잘라 배정) ----------
+let pdfDoc = null;
+let pdfCurrentPage = 1;
+let pdfNumPages = 1;
+let batchQueue = [];
+let batchIndex = 0;
+let zoomLevel = 1;
+let cropMode = false;
+let dragState = null;
+
+$('#batchPhotoFab').addEventListener('click', ()=>{
+  batchQueue = roster.filter(s => activeFilter==='all' || classKey(s)===activeFilter)
+    .slice()
+    .sort((a,b)=> studentNumber(a).localeCompare(studentNumber(b), 'ko', {numeric:true}));
+  if(batchQueue.length === 0){
+    showToast('등록된 학생이 없어요. 먼저 학생을 추가해주세요');
+    return;
+  }
+  batchIndex = 0;
+  zoomLevel = 1;
+  cropMode = false;
+  pdfDoc = null; pdfCurrentPage = 1; pdfNumPages = 1;
+  $('#batchStep1').style.display = 'block';
+  $('#batchStep2').style.display = 'none';
+  $('#batchPageNav').style.display = 'none';
+  $('#batchFileInput').value = '';
+  const ctx = $('#pageCanvas').getContext('2d');
+  ctx.clearRect(0,0,$('#pageCanvas').width,$('#pageCanvas').height);
+  openOverlay('batchOverlay');
+});
+
+function populateJumpSelect(){
+  const sel = $('#batchJumpSelect');
+  sel.innerHTML = '';
+  batchQueue.forEach((s)=>{
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${studentLabel(s)} ${s.name}${s.photo ? ' ✓' : ''}`;
+    sel.appendChild(opt);
+  });
+  if(batchQueue[batchIndex]) sel.value = batchQueue[batchIndex].id;
+}
+$('#batchJumpSelect').addEventListener('change', (e)=>{
+  const idx = batchQueue.findIndex(s=>s.id===e.target.value);
+  if(idx >= 0){ batchIndex = idx; updateBatchTarget(); }
+});
+
+function updateBatchTarget(){
+  if(batchIndex >= batchQueue.length){
+    $('#batchTargetPhoto').innerHTML = '✅';
+    $('#batchTargetName').textContent = '모든 학생 완료!';
+    $('#batchProgress').textContent = `${batchQueue.length} / ${batchQueue.length}명`;
+    return;
+  }
+  const s = batchQueue[batchIndex];
+  $('#batchTargetPhoto').innerHTML = s.photo ? `<img src="${s.photo}">` : initials(s.name);
+  $('#batchTargetName').textContent = `${s.name} · ${studentLabel(s)}`;
+  $('#batchProgress').textContent = `${batchIndex} / ${batchQueue.length}명`;
+  const sel = $('#batchJumpSelect');
+  if(sel.value !== s.id) sel.value = s.id;
+}
+
+$('#skipStudentBtn').addEventListener('click', ()=>{
+  batchIndex = Math.min(batchIndex + 1, batchQueue.length);
+  updateBatchTarget();
+});
+
+$('#batchFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  populateJumpSelect();
+  updateBatchTarget();
+  $('#batchStep1').style.display = 'none';
+  $('#batchStep2').style.display = 'block';
+
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  if(isPdf){
+    $('#batchPageNav').style.display = 'flex';
+    await loadPdfFile(file);
+  } else {
+    $('#batchPageNav').style.display = 'none';
+    await loadImageFile(file);
+  }
+});
+
+async function ensurePdfJsLoaded(){
+  if(window.pdfjsLib) return;
+  await new Promise((resolve, reject)=>{
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = resolve;
+    script.onerror = ()=>reject(new Error('pdf.js 로드 실패'));
+    document.head.appendChild(script);
+  });
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function loadPdfFile(file){
+  try{
+    showToast('PDF를 불러오는 중...');
+    await ensurePdfJsLoaded();
+    const buf = await file.arrayBuffer();
+    pdfDoc = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    pdfNumPages = pdfDoc.numPages;
+    pdfCurrentPage = 1;
+    await renderPdfPage(pdfCurrentPage);
+  }catch(err){
+    console.error(err);
+    showToast('PDF를 여는 데 실패했어요');
+  }
+}
+
+async function renderPdfPage(pageNum){
+  const page = await pdfDoc.getPage(pageNum);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const targetWidth = 1400;
+  const scale = targetWidth / baseViewport.width;
+  const viewport = page.getViewport({ scale });
+  const canvas = $('#pageCanvas');
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  zoomLevel = 1;
+  applyZoom();
+  $('#pageIndicator').textContent = `${pageNum} / ${pdfNumPages}쪽`;
+}
+
+$('#prevPageBtn').addEventListener('click', async ()=>{
+  if(pdfCurrentPage > 1){ pdfCurrentPage--; await renderPdfPage(pdfCurrentPage); }
+});
+$('#nextPageBtn').addEventListener('click', async ()=>{
+  if(pdfCurrentPage < pdfNumPages){ pdfCurrentPage++; await renderPdfPage(pdfCurrentPage); }
+});
+
+async function loadImageFile(file){
+  const reader = new FileReader();
+  const dataUrl = await new Promise((res, rej)=>{
+    reader.onload = ()=>res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+  const img = new Image();
+  await new Promise((res, rej)=>{ img.onload = res; img.onerror = rej; img.src = dataUrl; });
+  const maxW = 1600;
+  const scale = Math.min(1, maxW / img.width);
+  const canvas = $('#pageCanvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  zoomLevel = 1;
+  applyZoom();
+}
+
+function applyZoom(){
+  const canvas = $('#pageCanvas');
+  const stage = $('#cropStage');
+  const baseWidth = stage.clientWidth || 320;
+  canvas.style.width = Math.round(baseWidth * zoomLevel) + 'px';
+  canvas.style.height = 'auto';
+  $('#zoomLabel').textContent = Math.round(zoomLevel * 100) + '%';
+}
+$('#zoomInBtn').addEventListener('click', ()=>{ zoomLevel = Math.min(3, zoomLevel + 0.5); applyZoom(); });
+$('#zoomOutBtn').addEventListener('click', ()=>{ zoomLevel = Math.max(1, zoomLevel - 0.5); applyZoom(); });
+
+function setCropMode(on){
+  cropMode = on;
+  $('#cropStage').style.touchAction = on ? 'none' : 'pan-x pan-y';
+  const btn = $('#modeToggleBtn');
+  btn.textContent = on ? '✂️ 선택 모드' : '🖐 이동 모드';
+  btn.classList.toggle('active', on);
+}
+$('#modeToggleBtn').addEventListener('click', ()=> setCropMode(!cropMode));
+setCropMode(false);
+
+const cropStageEl = $('#cropStage');
+const pageCanvasEl = $('#pageCanvas');
+const cropBoxEl = $('#cropBox');
+
+function stagePoint(e){
+  const rect = cropStageEl.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left + cropStageEl.scrollLeft,
+    y: e.clientY - rect.top + cropStageEl.scrollTop
+  };
+}
+
+pageCanvasEl.addEventListener('pointerdown', (e)=>{
+  if(!cropMode) return;
+  e.preventDefault();
+  const p = stagePoint(e);
+  dragState = { startX: p.x, startY: p.y };
+  cropBoxEl.style.display = 'block';
+  cropBoxEl.style.left = p.x + 'px';
+  cropBoxEl.style.top = p.y + 'px';
+  cropBoxEl.style.width = '0px';
+  cropBoxEl.style.height = '0px';
+  pageCanvasEl.setPointerCapture(e.pointerId);
+});
+
+pageCanvasEl.addEventListener('pointermove', (e)=>{
+  if(!cropMode || !dragState) return;
+  const p = stagePoint(e);
+  const left = Math.min(dragState.startX, p.x);
+  const top = Math.min(dragState.startY, p.y);
+  const w = Math.abs(p.x - dragState.startX);
+  const h = Math.abs(p.y - dragState.startY);
+  cropBoxEl.style.left = left + 'px';
+  cropBoxEl.style.top = top + 'px';
+  cropBoxEl.style.width = w + 'px';
+  cropBoxEl.style.height = h + 'px';
+});
+
+pageCanvasEl.addEventListener('pointerup', (e)=>{
+  if(!cropMode || !dragState) return;
+  const p = stagePoint(e);
+  const left = Math.min(dragState.startX, p.x);
+  const top = Math.min(dragState.startY, p.y);
+  const w = Math.abs(p.x - dragState.startX);
+  const h = Math.abs(p.y - dragState.startY);
+  dragState = null;
+  cropBoxEl.style.display = 'none';
+  if(w < 12 || h < 12) return;
+
+  const scaleX = pageCanvasEl.width / pageCanvasEl.clientWidth;
+  const scaleY = pageCanvasEl.height / pageCanvasEl.clientHeight;
+  const sx = (left - pageCanvasEl.offsetLeft) * scaleX;
+  const sy = (top - pageCanvasEl.offsetTop) * scaleY;
+  const sw = w * scaleX;
+  const sh = h * scaleY;
+  assignCrop(sx, sy, sw, sh);
+});
+
+async function assignCrop(sx, sy, sw, sh){
+  if(batchIndex >= batchQueue.length){
+    showToast('배정할 학생이 남아있지 않아요');
+    return;
+  }
+  const size = 200;
+  const out = document.createElement('canvas');
+  out.width = size; out.height = size;
+  const ctx = out.getContext('2d');
+  const scale = Math.max(size / sw, size / sh);
+  const dw = sw * scale, dh = sh * scale;
+  ctx.drawImage(pageCanvasEl, sx, sy, sw, sh, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  const dataUrl = out.toDataURL('image/jpeg', 0.85);
+
+  const queuedStudent = batchQueue[batchIndex];
+  const target = roster.find(x => x.id === queuedStudent.id);
+  if(target){
+    target.photo = dataUrl;
+    await saveRoster();
+    render();
+  }
+  showToast(`${queuedStudent.name} 사진 저장됨`);
+  batchIndex++;
+  populateJumpSelect();
+  updateBatchTarget();
+}
+
+window.addEventListener('resize', ()=>{
+  if($('#batchOverlay').classList.contains('show')) applyZoom();
+});
+
+loadData();
+</script>
+</body>
+</html>
