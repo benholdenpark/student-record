@@ -457,7 +457,10 @@
 <body>
 
 <header>
-  <h1>📓 학생 기록장</h1>
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <h1>📓 학생 기록장</h1>
+    <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;">🗑 전체 초기화</button>
+  </div>
   <div class="sub">특이사항을 그때그때 기록해두세요</div>
   <div class="search-wrap">
     <input id="searchInput" type="text" placeholder="이름 또는 학번 검색">
@@ -469,11 +472,83 @@
 <div id="grid" class="grid"></div>
 <div id="emptyState" class="empty" style="display:none;">
   <div class="big">등록된 학생이 없어요</div>
-  <div>오른쪽 아래 + 버튼으로 학생을 추가해보세요</div>
+  <div>오른쪽 아래 + 버튼으로 학생을 추가하거나 엑셀 명렬표를 올려보세요</div>
 </div>
 
 <button class="batch-fab" id="batchPhotoFab" title="사진 일괄 등록">📷</button>
 <button class="fab" id="addStudentFab">＋</button>
+
+<!-- 학생 추가 방법 선택 시트 -->
+<div class="overlay" id="addChoiceOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2><span>학생 추가</span><button class="close-x" data-close="addChoiceOverlay">✕</button></h2>
+    <div class="btn-row" style="margin-top:0;flex-direction:column;">
+      <button class="btn btn-primary" id="chooseManualAddBtn" style="margin-bottom:8px;">✏️ 학생 한 명씩 직접 추가</button>
+      <button class="btn btn-ghost" id="chooseExcelImportBtn">📄 엑셀 명렬표로 한번에 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 명렬표 가져오기 시트 -->
+<div class="overlay" id="excelOverlay">
+  <div class="sheet" style="max-height:94vh;">
+    <div class="sheet-handle"></div>
+    <h2><span>엑셀 명렬표로 추가</span><button class="close-x" data-close="excelOverlay">✕</button></h2>
+
+    <div id="excelStep1">
+      <div class="batch-hint" style="margin-top:0;margin-bottom:10px;">엑셀(.xlsx/.xls/.csv) 파일을 올리면 표를 보면서 어느 열이 번호이고 어느 열이 이름인지 직접 골라서 넣을 수 있어요. 한 반씩 순서대로 추가하면 돼요.</div>
+      <label style="margin-top:0;">엑셀 파일</label>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
+    </div>
+
+    <div id="excelStep2" style="display:none;">
+      <div id="excelSheetNav" style="display:none;margin-bottom:10px;">
+        <label style="margin-top:0;">시트 선택</label>
+        <select id="excelSheetSelect"></select>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <label style="margin-top:0;">학년</label>
+          <select id="excelGrade">
+            <option value="1">1학년</option>
+            <option value="2">2학년</option>
+            <option value="3">3학년</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:0;">반</label>
+          <input type="text" id="excelClassNum" inputmode="numeric" placeholder="예: 6">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <label>번호 열</label>
+          <select id="excelNumCol"></select>
+        </div>
+        <div style="flex:1;">
+          <label>이름 열</label>
+          <select id="excelNameCol"></select>
+        </div>
+        <div style="flex:1;">
+          <label>시작 행</label>
+          <input type="text" id="excelStartRow" inputmode="numeric" placeholder="예: 2">
+        </div>
+      </div>
+
+      <label>미리보기</label>
+      <div id="excelPreview" style="overflow:auto;max-height:34vh;border:1px solid var(--line);border-radius:10px;background:#fff;"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-close="excelOverlay">닫기</button>
+        <button class="btn btn-primary" id="excelImportBtn">이 조건으로 학생 추가</button>
+      </div>
+      <div style="text-align:center;font-size:11.5px;color:var(--ink-soft);margin-top:6px;" id="excelImportedCount"></div>
+    </div>
+  </div>
+</div>
 
 <!-- 학생 추가/수정 시트 -->
 <div class="overlay" id="studentOverlay">
@@ -628,7 +703,7 @@ function classKey(s){
 }
 
 const $ = (sel) => document.querySelector(sel);
-const overlayIds = ['studentOverlay','detailOverlay','noteOverlay'];
+const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay'];
 
 function showToast(msg){
   const t = $('#toast');
@@ -657,145 +732,30 @@ function uid(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 }
 
-// 2026학년도 학적 현황(2026.7.1. 기준) - 1학년 6,7반 / 3학년 1,2,3반
-const SEED_STUDENTS = [
-  {"grade":1,"classNum":6,"rollNum":1,"name":"곽도원"},
-  {"grade":1,"classNum":6,"rollNum":2,"name":"권윤후"},
-  {"grade":1,"classNum":6,"rollNum":3,"name":"김강민"},
-  {"grade":1,"classNum":6,"rollNum":4,"name":"김래오"},
-  {"grade":1,"classNum":6,"rollNum":5,"name":"김선우"},
-  {"grade":1,"classNum":6,"rollNum":6,"name":"김아준"},
-  {"grade":1,"classNum":6,"rollNum":7,"name":"김지오"},
-  {"grade":1,"classNum":6,"rollNum":8,"name":"박승주"},
-  {"grade":1,"classNum":6,"rollNum":9,"name":"박시현"},
-  {"grade":1,"classNum":6,"rollNum":10,"name":"신수하"},
-  {"grade":1,"classNum":6,"rollNum":11,"name":"신효찬"},
-  {"grade":1,"classNum":6,"rollNum":12,"name":"유예성"},
-  {"grade":1,"classNum":6,"rollNum":13,"name":"윤성민"},
-  {"grade":1,"classNum":6,"rollNum":14,"name":"이건우"},
-  {"grade":1,"classNum":6,"rollNum":15,"name":"이유민"},
-  {"grade":1,"classNum":6,"rollNum":16,"name":"이은산"},
-  {"grade":1,"classNum":6,"rollNum":17,"name":"이준영"},
-  {"grade":1,"classNum":6,"rollNum":18,"name":"이현규"},
-  {"grade":1,"classNum":6,"rollNum":19,"name":"전지훈"},
-  {"grade":1,"classNum":6,"rollNum":20,"name":"정연우"},
-  {"grade":1,"classNum":6,"rollNum":21,"name":"최준현"},
-  {"grade":1,"classNum":6,"rollNum":22,"name":"하태서"},
-  {"grade":1,"classNum":6,"rollNum":23,"name":"한시찬"},
-  {"grade":1,"classNum":7,"rollNum":1,"name":"강주호"},
-  {"grade":1,"classNum":7,"rollNum":2,"name":"김도군"},
-  {"grade":1,"classNum":7,"rollNum":3,"name":"김도윤"},
-  {"grade":1,"classNum":7,"rollNum":4,"name":"김산"},
-  {"grade":1,"classNum":7,"rollNum":5,"name":"김선오"},
-  {"grade":1,"classNum":7,"rollNum":6,"name":"김용현"},
-  {"grade":1,"classNum":7,"rollNum":7,"name":"김지오"},
-  {"grade":1,"classNum":7,"rollNum":8,"name":"김지후"},
-  {"grade":1,"classNum":7,"rollNum":9,"name":"김태후"},
-  {"grade":1,"classNum":7,"rollNum":10,"name":"김형준"},
-  {"grade":1,"classNum":7,"rollNum":11,"name":"박도현"},
-  {"grade":1,"classNum":7,"rollNum":12,"name":"박민찬"},
-  {"grade":1,"classNum":7,"rollNum":13,"name":"송유빈"},
-  {"grade":1,"classNum":7,"rollNum":14,"name":"송은성"},
-  {"grade":1,"classNum":7,"rollNum":16,"name":"오태규"},
-  {"grade":1,"classNum":7,"rollNum":17,"name":"윤서후"},
-  {"grade":1,"classNum":7,"rollNum":18,"name":"이라온"},
-  {"grade":1,"classNum":7,"rollNum":19,"name":"이민준"},
-  {"grade":1,"classNum":7,"rollNum":20,"name":"임윤호"},
-  {"grade":1,"classNum":7,"rollNum":21,"name":"전연우"},
-  {"grade":1,"classNum":7,"rollNum":22,"name":"조건우"},
-  {"grade":1,"classNum":7,"rollNum":23,"name":"최도현"},
-  {"grade":1,"classNum":7,"rollNum":24,"name":"최예성"},
-  {"grade":3,"classNum":1,"rollNum":1,"name":"강동주"},
-  {"grade":3,"classNum":1,"rollNum":2,"name":"경준휘"},
-  {"grade":3,"classNum":1,"rollNum":3,"name":"김동현"},
-  {"grade":3,"classNum":1,"rollNum":4,"name":"김류원"},
-  {"grade":3,"classNum":1,"rollNum":5,"name":"김상현"},
-  {"grade":3,"classNum":1,"rollNum":6,"name":"김준현"},
-  {"grade":3,"classNum":1,"rollNum":7,"name":"김하람"},
-  {"grade":3,"classNum":1,"rollNum":8,"name":"루승현"},
-  {"grade":3,"classNum":1,"rollNum":9,"name":"박지우"},
-  {"grade":3,"classNum":1,"rollNum":10,"name":"백시우"},
-  {"grade":3,"classNum":1,"rollNum":11,"name":"양진혁"},
-  {"grade":3,"classNum":1,"rollNum":12,"name":"용지민"},
-  {"grade":3,"classNum":1,"rollNum":13,"name":"용호영"},
-  {"grade":3,"classNum":1,"rollNum":14,"name":"유능한"},
-  {"grade":3,"classNum":1,"rollNum":15,"name":"윤태희"},
-  {"grade":3,"classNum":1,"rollNum":16,"name":"이동구"},
-  {"grade":3,"classNum":1,"rollNum":17,"name":"이민우"},
-  {"grade":3,"classNum":1,"rollNum":18,"name":"이율"},
-  {"grade":3,"classNum":1,"rollNum":19,"name":"이진서"},
-  {"grade":3,"classNum":1,"rollNum":20,"name":"임주안"},
-  {"grade":3,"classNum":1,"rollNum":21,"name":"전형기"},
-  {"grade":3,"classNum":1,"rollNum":22,"name":"조현진"},
-  {"grade":3,"classNum":1,"rollNum":23,"name":"채희승"},
-  {"grade":3,"classNum":1,"rollNum":24,"name":"천준서"},
-  {"grade":3,"classNum":1,"rollNum":25,"name":"함준식"},
-  {"grade":3,"classNum":2,"rollNum":1,"name":"강규빈"},
-  {"grade":3,"classNum":2,"rollNum":2,"name":"고승희"},
-  {"grade":3,"classNum":2,"rollNum":3,"name":"김우빈"},
-  {"grade":3,"classNum":2,"rollNum":5,"name":"김찬"},
-  {"grade":3,"classNum":2,"rollNum":6,"name":"김찬우"},
-  {"grade":3,"classNum":2,"rollNum":7,"name":"김태환"},
-  {"grade":3,"classNum":2,"rollNum":8,"name":"박성수"},
-  {"grade":3,"classNum":2,"rollNum":9,"name":"박찬의"},
-  {"grade":3,"classNum":2,"rollNum":10,"name":"서성원"},
-  {"grade":3,"classNum":2,"rollNum":11,"name":"손영주"},
-  {"grade":3,"classNum":2,"rollNum":12,"name":"윤지훈"},
-  {"grade":3,"classNum":2,"rollNum":13,"name":"이시율"},
-  {"grade":3,"classNum":2,"rollNum":14,"name":"이용우"},
-  {"grade":3,"classNum":2,"rollNum":15,"name":"이우진"},
-  {"grade":3,"classNum":2,"rollNum":16,"name":"이지율"},
-  {"grade":3,"classNum":2,"rollNum":17,"name":"전태양"},
-  {"grade":3,"classNum":2,"rollNum":18,"name":"정여준"},
-  {"grade":3,"classNum":2,"rollNum":19,"name":"정태건"},
-  {"grade":3,"classNum":2,"rollNum":20,"name":"조민기"},
-  {"grade":3,"classNum":2,"rollNum":21,"name":"조성민"},
-  {"grade":3,"classNum":2,"rollNum":22,"name":"채현호"},
-  {"grade":3,"classNum":2,"rollNum":23,"name":"최원욱"},
-  {"grade":3,"classNum":2,"rollNum":24,"name":"홍기윤"},
-  {"grade":3,"classNum":2,"rollNum":25,"name":"김민준"},
-  {"grade":3,"classNum":3,"rollNum":1,"name":"강리우"},
-  {"grade":3,"classNum":3,"rollNum":2,"name":"강재서"},
-  {"grade":3,"classNum":3,"rollNum":3,"name":"권민율"},
-  {"grade":3,"classNum":3,"rollNum":4,"name":"김기훈"},
-  {"grade":3,"classNum":3,"rollNum":5,"name":"김서우"},
-  {"grade":3,"classNum":3,"rollNum":6,"name":"김용민"},
-  {"grade":3,"classNum":3,"rollNum":7,"name":"김지성"},
-  {"grade":3,"classNum":3,"rollNum":8,"name":"배강준"},
-  {"grade":3,"classNum":3,"rollNum":9,"name":"서정우"},
-  {"grade":3,"classNum":3,"rollNum":10,"name":"송승환"},
-  {"grade":3,"classNum":3,"rollNum":11,"name":"신원하"},
-  {"grade":3,"classNum":3,"rollNum":12,"name":"심유찬"},
-  {"grade":3,"classNum":3,"rollNum":13,"name":"오승민"},
-  {"grade":3,"classNum":3,"rollNum":14,"name":"이민재"},
-  {"grade":3,"classNum":3,"rollNum":15,"name":"이서율"},
-  {"grade":3,"classNum":3,"rollNum":16,"name":"이승준"},
-  {"grade":3,"classNum":3,"rollNum":17,"name":"이시원"},
-  {"grade":3,"classNum":3,"rollNum":18,"name":"이재경"},
-  {"grade":3,"classNum":3,"rollNum":19,"name":"이태민"},
-  {"grade":3,"classNum":3,"rollNum":20,"name":"장민성"},
-  {"grade":3,"classNum":3,"rollNum":21,"name":"전승원"},
-  {"grade":3,"classNum":3,"rollNum":22,"name":"정휘원"},
-  {"grade":3,"classNum":3,"rollNum":23,"name":"조인성"},
-  {"grade":3,"classNum":3,"rollNum":24,"name":"주서진"},
-  {"grade":3,"classNum":3,"rollNum":25,"name":"황지후"}
-];
-
 // ---------- Storage ----------
-async function loadData(){
+async function safeGet(key){
   try{
-    const r = await window.storage.get('roster');
-    roster = r && r.value ? JSON.parse(r.value) : [];
-  }catch(e){ roster = []; }
-  try{
-    const n = await window.storage.get('notes');
-    notes = n && n.value ? JSON.parse(n.value) : {};
-  }catch(e){ notes = {}; }
+    const r = await window.storage.get(key);
+    return r ? r.value : null;
+  }catch(e){
+    return null;
+  }
+}
 
-  // 최초 실행 시 학적 현황(1학년 6,7반 / 3학년 1,2,3반)으로 초기 명단 채우기
-  if(roster.length === 0 && SEED_STUDENTS.length > 0){
-    roster = SEED_STUDENTS.map(s => ({ id: uid(), grade: s.grade, classNum: s.classNum, rollNum: s.rollNum, name: s.name, photo: null }));
+async function loadData(){
+  const rosterRaw = await safeGet('roster');
+  roster = rosterRaw ? JSON.parse(rosterRaw) : [];
+  const notesRaw = await safeGet('notes');
+  notes = notesRaw ? JSON.parse(notesRaw) : {};
+
+  // 이전 버전에서 자동으로 채워졌던 예시 명단을 한 번만 정리 (이제는 엑셀로 직접 올리는 방식)
+  const schemaVersion = await safeGet('schemaVersion');
+  if(schemaVersion !== 'v2'){
+    roster = [];
+    notes = {};
     await saveRoster();
+    await saveNotes();
+    try{ await window.storage.set('schemaVersion', 'v2'); }catch(e){}
   }
 
   render();
@@ -896,7 +856,7 @@ function escapeHtml(str){
 }
 
 // ---------- Student add/edit ----------
-$('#addStudentFab').addEventListener('click', ()=>{
+function openManualAddSheet(){
   editingStudentId = null;
   pendingPhotoData = null;
   $('#studentSheetTitle').textContent = '학생 추가';
@@ -914,6 +874,28 @@ $('#addStudentFab').addEventListener('click', ()=>{
   $('#photoPreview').innerHTML = '사진';
   $('#deleteStudentBtn').style.display = 'none';
   openOverlay('studentOverlay');
+}
+
+$('#addStudentFab').addEventListener('click', ()=>{
+  openOverlay('addChoiceOverlay');
+});
+$('#chooseManualAddBtn').addEventListener('click', ()=>{
+  closeOverlay('addChoiceOverlay');
+  openManualAddSheet();
+});
+$('#chooseExcelImportBtn').addEventListener('click', ()=>{
+  closeOverlay('addChoiceOverlay');
+  openExcelImportSheet();
+});
+
+$('#resetAllBtn').addEventListener('click', async ()=>{
+  if(!confirm('등록된 모든 학생과 기록을 삭제할까요? 이 작업은 되돌릴 수 없어요.')) return;
+  roster = [];
+  notes = {};
+  await saveRoster();
+  await saveNotes();
+  render();
+  showToast('모든 데이터를 초기화했어요');
 });
 
 $('#photoBtn').addEventListener('click', ()=> $('#photoInput').click());
@@ -1360,6 +1342,172 @@ async function assignCrop(sx, sy, sw, sh){
 
 window.addEventListener('resize', ()=>{
   if($('#batchOverlay').classList.contains('show')) applyZoom();
+});
+
+// ---------- Excel 명렬표로 학생 가져오기 ----------
+let excelWorkbook = null;
+let excelSheetData = [];  // array of arrays (현재 선택된 시트)
+
+function colLetter(idx){
+  let s = '';
+  idx += 1;
+  while(idx > 0){
+    const rem = (idx - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return s;
+}
+
+function openExcelImportSheet(){
+  excelWorkbook = null;
+  excelSheetData = [];
+  $('#excelStep1').style.display = 'block';
+  $('#excelStep2').style.display = 'none';
+  $('#excelSheetNav').style.display = 'none';
+  $('#excelFileInput').value = '';
+  $('#excelImportedCount').textContent = '';
+  if(activeFilter !== 'all'){
+    const [g,c] = activeFilter.split('-');
+    $('#excelGrade').value = g;
+    $('#excelClassNum').value = c;
+  } else {
+    $('#excelGrade').value = '1';
+    $('#excelClassNum').value = '';
+  }
+  openOverlay('excelOverlay');
+}
+
+async function ensureXlsxLibLoaded(){
+  if(window.XLSX) return;
+  await new Promise((resolve, reject)=>{
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    script.onload = resolve;
+    script.onerror = ()=>reject(new Error('엑셀 라이브러리 로드 실패'));
+    document.head.appendChild(script);
+  });
+}
+
+$('#excelFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    showToast('파일을 불러오는 중...');
+    await ensureXlsxLibLoaded();
+    const buf = await file.arrayBuffer();
+    excelWorkbook = window.XLSX.read(buf, { type: 'array' });
+    const sheetNames = excelWorkbook.SheetNames;
+
+    const sheetSelect = $('#excelSheetSelect');
+    sheetSelect.innerHTML = '';
+    sheetNames.forEach(name=>{
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sheetSelect.appendChild(opt);
+    });
+    $('#excelSheetNav').style.display = sheetNames.length > 1 ? 'block' : 'none';
+
+    loadExcelSheet(sheetNames[0]);
+    $('#excelStep1').style.display = 'none';
+    $('#excelStep2').style.display = 'block';
+  }catch(err){
+    console.error(err);
+    showToast('엑셀 파일을 여는 데 실패했어요');
+  }
+});
+
+$('#excelSheetSelect').addEventListener('change', (e)=>{
+  loadExcelSheet(e.target.value);
+});
+
+function loadExcelSheet(sheetName){
+  const ws = excelWorkbook.Sheets[sheetName];
+  excelSheetData = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+
+  const maxCols = excelSheetData.reduce((m, row)=> Math.max(m, row.length), 0);
+
+  // 열 선택 드롭다운 채우기 (열 글자 + 첫 값 미리보기)
+  [ '#excelNumCol', '#excelNameCol' ].forEach(sel=>{
+    const el = $(sel);
+    el.innerHTML = '';
+    for(let c = 0; c < maxCols; c++){
+      const sampleRow = excelSheetData.find(r => (r[c] ?? '') !== '');
+      const sample = sampleRow ? String(sampleRow[c]).slice(0, 8) : '';
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = `${colLetter(c)}열${sample ? ' · ' + sample : ''}`;
+      el.appendChild(opt);
+    }
+  });
+  // 이름 열은 보통 번호 다음 열로 기본 추정
+  if($('#excelNameCol').options.length > 1) $('#excelNameCol').selectedIndex = 1;
+
+  // 시작 행 추정: 숫자로 시작하는 첫 데이터 행
+  let guessRow = 1;
+  for(let r = 0; r < excelSheetData.length; r++){
+    const v = excelSheetData[r][0];
+    if(v !== '' && !isNaN(parseInt(v, 10))){ guessRow = r + 1; break; }
+  }
+  $('#excelStartRow').value = guessRow;
+
+  renderExcelPreview();
+}
+
+function renderExcelPreview(){
+  const wrap = $('#excelPreview');
+  const rows = excelSheetData.slice(0, 30);
+  const maxCols = rows.reduce((m, row)=> Math.max(m, row.length), 0);
+
+  let html = '<table style="border-collapse:collapse;font-size:11.5px;width:100%;">';
+  html += '<tr>' + '<th style="position:sticky;top:0;background:var(--paper-2);border:1px solid var(--line);padding:3px 6px;">#</th>' +
+    Array.from({length:maxCols}, (_,c)=>`<th style="position:sticky;top:0;background:var(--paper-2);border:1px solid var(--line);padding:3px 6px;">${colLetter(c)}</th>`).join('') + '</tr>';
+  rows.forEach((row, r)=>{
+    html += `<tr><td style="border:1px solid var(--line);padding:3px 6px;color:var(--ink-soft);">${r+1}</td>`;
+    for(let c=0;c<maxCols;c++){
+      html += `<td style="border:1px solid var(--line);padding:3px 6px;white-space:nowrap;">${escapeHtml(String(row[c] ?? ''))}</td>`;
+    }
+    html += '</tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+$('#excelImportBtn').addEventListener('click', async ()=>{
+  const grade = parseInt($('#excelGrade').value, 10);
+  const classNum = parseInt($('#excelClassNum').value.trim(), 10);
+  const numCol = parseInt($('#excelNumCol').value, 10);
+  const nameCol = parseInt($('#excelNameCol').value, 10);
+  const startRow = Math.max(1, parseInt($('#excelStartRow').value.trim() || '1', 10));
+
+  if(!classNum){
+    showToast('반을 입력해주세요');
+    return;
+  }
+
+  let added = 0, skipped = 0;
+  for(let r = startRow - 1; r < excelSheetData.length; r++){
+    const row = excelSheetData[r];
+    if(!row) continue;
+    const rawNum = row[numCol];
+    const rawName = row[nameCol];
+    const name = rawName !== undefined && rawName !== null ? String(rawName).trim() : '';
+    if(!name) continue;
+    const rollNum = parseInt(String(rawNum).replace(/[^0-9]/g, ''), 10);
+    if(!rollNum){ skipped++; continue; }
+
+    const exists = roster.some(s => s.grade===grade && s.classNum===classNum && s.rollNum===rollNum);
+    if(exists){ skipped++; continue; }
+
+    roster.push({ id: uid(), grade, classNum, rollNum, name, photo: null });
+    added++;
+  }
+
+  await saveRoster();
+  render();
+  $('#excelImportedCount').textContent = `${added}명 추가됨${skipped > 0 ? ` · ${skipped}명 건너뜀(중복/번호없음)` : ''}`;
+  showToast(`${added}명 추가했어요`);
 });
 
 loadData();
