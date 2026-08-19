@@ -497,7 +497,7 @@
 
 <header>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-    <h1>📓 학생 기록장</h1>
+    <h1 id="titleRefresh" style="cursor:pointer;">📓 학생 기록장</h1>
     <div style="display:flex;gap:6px;flex-shrink:0;">
       <button id="consolidateBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
       <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
@@ -1934,6 +1934,10 @@ $('#excelImportBtn').addEventListener('click', async ()=>{
   render();
   $('#excelImportedCount').textContent = `${added}명 추가됨${skipped > 0 ? ` · ${skipped}명 건너뜀(중복/번호없음)` : ''}`;
   showToast(`${added}명 추가했어요`);
+});
+
+$('#titleRefresh').addEventListener('click', ()=>{
+  location.reload();
 });
 
 loadData();
