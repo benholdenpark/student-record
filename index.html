@@ -788,14 +788,29 @@ function uid(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 }
 
-// ---------- Storage ----------
-async function safeGet(key){
+// ---------- Storage (브라우저 localStorage 사용 — 다운로드해서 열거나 GitHub Pages 등에 올려도 그 브라우저에 계속 저장됨) ----------
+const STORAGE_PREFIX = 'srb_'; // student-record-book
+
+function lsGet(key){
   try{
-    const r = await window.storage.get(key);
-    return r ? r.value : null;
+    return localStorage.getItem(STORAGE_PREFIX + key);
   }catch(e){
+    console.error('localStorage get failed', e);
     return null;
   }
+}
+function lsSet(key, value){
+  try{
+    localStorage.setItem(STORAGE_PREFIX + key, value);
+    return true;
+  }catch(e){
+    console.error('localStorage set failed', e);
+    return false;
+  }
+}
+
+async function safeGet(key){
+  return lsGet(key);
 }
 
 async function loadData(){
@@ -811,26 +826,18 @@ async function loadData(){
     notes = {};
     await saveRoster();
     await saveNotes();
-    try{ await window.storage.set('schemaVersion', 'v2'); }catch(e){}
+    lsSet('schemaVersion', 'v2');
   }
 
   render();
 }
 async function saveRoster(){
-  try{
-    await window.storage.set('roster', JSON.stringify(roster));
-  }catch(e){
-    console.error('roster save failed', e);
-    showToast('저장 중 문제가 발생했어요');
-  }
+  const ok = lsSet('roster', JSON.stringify(roster));
+  if(!ok) showToast('저장 중 문제가 발생했어요 (브라우저 저장 공간을 확인해주세요)');
 }
 async function saveNotes(){
-  try{
-    await window.storage.set('notes', JSON.stringify(notes));
-  }catch(e){
-    console.error('notes save failed', e);
-    showToast('저장 중 문제가 발생했어요');
-  }
+  const ok = lsSet('notes', JSON.stringify(notes));
+  if(!ok) showToast('저장 중 문제가 발생했어요 (브라우저 저장 공간을 확인해주세요)');
 }
 
 // ---------- Render ----------
