@@ -496,9 +496,12 @@
 <body>
 
 <header>
-  <div style="display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
     <h1>📓 학생 기록장</h1>
-    <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;">🗑 전체 초기화</button>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="consolidateBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
+      <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
+    </div>
   </div>
   <div class="sub">특이사항을 그때그때 기록해두세요</div>
   <div class="search-wrap">
@@ -516,6 +519,22 @@
 
 <button class="batch-fab" id="batchPhotoFab" title="사진 일괄 등록">📷</button>
 <button class="fab" id="addStudentFab">＋</button>
+
+<!-- 기록 통합보기 시트 -->
+<div class="overlay" id="consolidateOverlay">
+  <div class="sheet" style="max-height:92vh;">
+    <div class="sheet-handle"></div>
+    <h2><span>기록 통합보기</span><button class="close-x" data-close="consolidateOverlay">✕</button></h2>
+    <div class="batch-hint" style="margin-top:0;margin-bottom:10px;" id="consolidateScope">전체 학생 기준</div>
+
+    <div id="consolidateBody" style="max-height:52vh;overflow-y:auto;margin-bottom:14px;"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="copyConsolidatedBtn">📋 복사하기</button>
+      <button class="btn btn-primary" id="downloadConsolidatedBtn">⬇️ 텍스트 파일로 저장</button>
+    </div>
+  </div>
+</div>
 
 <!-- 학생 추가 방법 선택 시트 -->
 <div class="overlay" id="addChoiceOverlay">
@@ -658,6 +677,7 @@
     </div>
     <div class="detail-actions">
       <button id="editStudentBtn">✏️ 정보 수정</button>
+      <button id="mergeNotesBtn" style="display:none;">🔗 기록 통합하기</button>
     </div>
 
     <button class="add-note-btn" id="addNoteBtn">＋ 특이사항 추가</button>
@@ -759,7 +779,7 @@ function classKey(s){
 }
 
 const $ = (sel) => document.querySelector(sel);
-const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay'];
+const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay','consolidateOverlay'];
 
 function showToast(msg){
   const t = $('#toast');
@@ -1046,6 +1066,32 @@ $('#editStudentBtn').addEventListener('click', ()=>{
   openOverlay('studentOverlay');
 });
 
+$('#mergeNotesBtn').addEventListener('click', async ()=>{
+  const arr = (notes[currentStudentId] || []).slice().sort((a,b)=>{
+    const dtA = a.date + ' ' + (a.time || '00:00');
+    const dtB = b.date + ' ' + (b.time || '00:00');
+    return dtA.localeCompare(dtB);
+  });
+  if(arr.length < 2) return;
+  if(!confirm(`이 학생의 기록 ${arr.length}건을 하나로 합칠까요? 개별 기록은 사라지고, 날짜별로 정리된 기록 1건만 남아요.`)) return;
+
+  const mergedContent = arr
+    .map(n => `[${formatDate(n.date)}${n.time ? ' ' + n.time : ''}] ${n.content}`)
+    .join('\n');
+
+  notes[currentStudentId] = [{
+    id: uid(),
+    date: todayStr(),
+    time: nowStr(),
+    content: mergedContent
+  }];
+
+  await saveNotes();
+  renderNotes();
+  render();
+  showToast('기록을 통합했어요');
+});
+
 function renderNotes(){
   const list = $('#notesList');
   const arr = (notes[currentStudentId] || []).slice().sort((a,b)=>{
@@ -1053,6 +1099,7 @@ function renderNotes(){
     const dtB = b.date + ' ' + (b.time||'00:00');
     return dtB.localeCompare(dtA);
   });
+  $('#mergeNotesBtn').style.display = arr.length >= 2 ? 'inline-block' : 'none';
   if(arr.length === 0){
     list.innerHTML = '<div class="no-notes">아직 기록된 특이사항이 없어요</div>';
     return;
@@ -1141,6 +1188,119 @@ $('#saveNoteBtn').addEventListener('click', async ()=>{
 });
 
 $('#searchInput').addEventListener('input', render);
+
+// ---------- 기록 통합보기 ----------
+let consolidatedText = '';
+
+function buildConsolidatedData(){
+  const targets = roster
+    .filter(s => activeFilter === 'all' || classKey(s) === activeFilter)
+    .filter(s => (notes[s.id] || []).length > 0)
+    .sort((a,b)=> studentNumber(a).localeCompare(studentNumber(b), 'ko', {numeric:true}));
+
+  const scopeLabel = activeFilter === 'all'
+    ? '전체'
+    : (()=>{ const [g,c] = activeFilter.split('-'); return `${g}학년 ${c}반`; })();
+
+  return { targets, scopeLabel };
+}
+
+function buildConsolidatedText(targets, scopeLabel){
+  const lines = [];
+  lines.push(`[학생 기록 통합] ${scopeLabel}`);
+  lines.push(`생성일: ${todayStr()}`);
+  lines.push('');
+  targets.forEach(s=>{
+    lines.push(`■ ${s.name} (${studentLabel(s)})`);
+    const arr = (notes[s.id] || []).slice().sort((a,b)=>{
+      const dtA = a.date + ' ' + (a.time || '00:00');
+      const dtB = b.date + ' ' + (b.time || '00:00');
+      return dtA.localeCompare(dtB);
+    });
+    arr.forEach(n=>{
+      lines.push(`- ${n.date}${n.time ? ' ' + n.time : ''}: ${n.content.replace(/\n/g, ' ')}`);
+    });
+    lines.push('');
+  });
+  return lines.join('\n').trim() + '\n';
+}
+
+function renderConsolidateOverlay(){
+  const { targets, scopeLabel } = buildConsolidatedData();
+  $('#consolidateScope').textContent = `${scopeLabel} 기준 · 기록이 있는 학생 ${targets.length}명`;
+
+  const body = $('#consolidateBody');
+  if(targets.length === 0){
+    body.innerHTML = '<div class="no-notes">기록된 특이사항이 아직 없어요</div>';
+    consolidatedText = buildConsolidatedText(targets, scopeLabel);
+    return;
+  }
+
+  body.innerHTML = '';
+  targets.forEach(s=>{
+    const arr = (notes[s.id] || []).slice().sort((a,b)=>{
+      const dtA = a.date + ' ' + (a.time || '00:00');
+      const dtB = b.date + ' ' + (b.time || '00:00');
+      return dtA.localeCompare(dtB);
+    });
+    const section = document.createElement('div');
+    section.style.marginBottom = '14px';
+    section.innerHTML = `
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:6px;">${escapeHtml(s.name)} <span style="font-weight:500;color:var(--ink-soft);font-size:11.5px;">(${escapeHtml(studentLabel(s))})</span></div>
+      ${arr.map(n=>`
+        <div class="note-item" style="margin-bottom:6px;">
+          <div class="note-meta"><span>${formatDate(n.date)} ${n.time || ''}</span></div>
+          <div class="note-content">${escapeHtml(n.content)}</div>
+        </div>
+      `).join('')}
+    `;
+    body.appendChild(section);
+  });
+
+  consolidatedText = buildConsolidatedText(targets, scopeLabel);
+}
+
+$('#consolidateBtn').addEventListener('click', ()=>{
+  renderConsolidateOverlay();
+  openOverlay('consolidateOverlay');
+});
+
+$('#copyConsolidatedBtn').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(consolidatedText);
+    showToast('복사했어요');
+  }catch(e){
+    // 클립보드 API 사용이 어려운 환경을 위한 대체 방법
+    const ta = document.createElement('textarea');
+    ta.value = consolidatedText;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try{
+      document.execCommand('copy');
+      showToast('복사했어요');
+    }catch(e2){
+      showToast('복사에 실패했어요');
+    }
+    document.body.removeChild(ta);
+  }
+});
+
+$('#downloadConsolidatedBtn').addEventListener('click', ()=>{
+  const blob = new Blob([consolidatedText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const { scopeLabel } = buildConsolidatedData();
+  a.href = url;
+  a.download = `학생기록_${scopeLabel.replace(/\s/g,'')}_${todayStr()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('파일로 저장했어요');
+});
 
 // ---------- Batch photo assignment (PDF/이미지에서 얼굴 잘라 배정) ----------
 let pdfDoc = null;
