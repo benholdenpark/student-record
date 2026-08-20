@@ -347,6 +347,54 @@
     margin-top:4px;
   }
   .summary-card .note-meta{color:var(--navy);font-weight:700;}
+
+  /* 사진 확대보기 */
+  #photoZoomOverlay{
+    align-items:center;
+    justify-content:center;
+  }
+  .zoom-content{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px;
+  }
+  .zoom-photo{
+    width:min(62vw, 260px);
+    height:min(62vw, 260px);
+    border-radius:50%;
+    background:var(--paper-2);
+    border:4px solid #fff;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    color:var(--navy);
+    font-weight:700;
+    font-size:64px;
+    font-family:'Noto Serif KR',serif;
+    margin-bottom:20px;
+    flex-shrink:0;
+  }
+  .zoom-photo img{width:100%;height:100%;object-fit:cover;}
+  .zoom-name{
+    color:#fff;
+    font-family:'Noto Serif KR',serif;
+    font-size:24px;
+    font-weight:700;
+    margin-bottom:6px;
+    text-align:center;
+  }
+  .zoom-num{
+    color:#D7DEE6;
+    font-size:15px;
+    margin-bottom:18px;
+  }
+  .zoom-hint{
+    color:#8FA0B3;
+    font-size:12px;
+  }
   .note-meta{
     font-size:11px;
     color:var(--ink-soft);
@@ -676,7 +724,7 @@
     <h2><span>학생 기록</span><button class="close-x" data-close="detailOverlay">✕</button></h2>
 
     <div class="detail-header">
-      <div class="photo" id="detailPhoto"></div>
+      <div class="photo" id="detailPhoto" style="cursor:pointer;"></div>
       <div class="info">
         <div class="name" id="detailName"></div>
         <div class="num" id="detailNum"></div>
@@ -761,6 +809,16 @@
         <button class="btn btn-primary" data-close="batchOverlay">완료</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 사진 확대보기 -->
+<div class="overlay" id="photoZoomOverlay">
+  <div class="zoom-content" id="photoZoomContent">
+    <div class="zoom-photo" id="zoomPhoto"></div>
+    <div class="zoom-name" id="zoomName"></div>
+    <div class="zoom-num" id="zoomNum"></div>
+    <div class="zoom-hint">화면을 누르면 닫혀요</div>
   </div>
 </div>
 
@@ -1066,6 +1124,18 @@ function openDetail(studentId){
   renderNotes();
   openOverlay('detailOverlay');
 }
+
+$('#detailPhoto').addEventListener('click', ()=>{
+  const s = roster.find(x=>x.id===currentStudentId);
+  if(!s) return;
+  $('#zoomPhoto').innerHTML = s.photo ? `<img src="${s.photo}">` : initials(s.name);
+  $('#zoomName').textContent = s.name;
+  $('#zoomNum').textContent = studentLabel(s);
+  openOverlay('photoZoomOverlay');
+});
+$('#photoZoomOverlay').addEventListener('click', ()=>{
+  closeOverlay('photoZoomOverlay');
+});
 
 $('#editStudentBtn').addEventListener('click', ()=>{
   const s = roster.find(x=>x.id===currentStudentId);
