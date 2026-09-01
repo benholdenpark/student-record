@@ -8,16 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=Nosifer&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#FAF6EF;
-    --paper-2:#F1EBDD;
-    --ink:#26313A;
-    --ink-soft:#5B6670;
-    --navy:#2E4057;
-    --navy-deep:#1D2B3D;
-    --coral:#E2793D;
-    --coral-soft:#F6E1CC;
-    --line:#DDD3BE;
-    --danger:#C1533A;
+    --paper:#141110;
+    --paper-2:#211B19;
+    --ink:#E9E1D6;
+    --ink-soft:#9C8E84;
+    --navy:#8B1A1A;
+    --navy-deep:#2E0A0A;
+    --coral:#C9A227;
+    --coral-soft:#2E2412;
+    --line:#3A322E;
+    --danger:#E23C3C;
     --radius:14px;
     font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;
   }
@@ -47,7 +47,7 @@
   }
   header .sub{
     font-size:12px;
-    color:#B9C4D0;
+    color:#B8A79C;
     margin-bottom:12px;
   }
   .search-wrap{
@@ -60,14 +60,14 @@
     border-radius:10px;
     padding:10px 12px;
     font-size:14px;
-    background:rgba(255,255,255,0.12);
+    background:rgba(200,70,70,0.14);
     color:#fff;
   }
-  .search-wrap input::placeholder{color:#9FACBB;}
+  .search-wrap input::placeholder{color:#B39084;}
   .count-pill{
     font-size:11px;
-    color:#B9C4D0;
-    border:1px solid rgba(255,255,255,0.25);
+    color:#B8A79C;
+    border:1px solid rgba(200,90,90,0.3);
     border-radius:20px;
     padding:0 10px;
     display:flex;
@@ -89,9 +89,9 @@
     flex-shrink:0;
     font-size:12.5px;
     font-weight:600;
-    color:#C9D2DB;
-    background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.18);
+    color:#CBB8AC;
+    background:rgba(200,70,70,0.10);
+    border:1px solid rgba(200,90,90,0.25);
     border-radius:20px;
     padding:6px 13px;
     white-space:nowrap;
@@ -122,7 +122,7 @@
   }
 
   .card{
-    background:#fff;
+    background:var(--paper-2);
     border:1px solid var(--line);
     border-radius:var(--radius);
     padding:12px;
@@ -166,7 +166,7 @@
     top:8px;
     right:8px;
     background:var(--coral);
-    color:#fff;
+    color:#1A1410;
     font-size:10px;
     font-weight:700;
     min-width:18px;
@@ -190,7 +190,7 @@
     border:none;
     font-size:28px;
     line-height:1;
-    box-shadow:0 6px 16px rgba(29,43,61,0.35);
+    box-shadow:0 6px 16px rgba(80,10,10,0.5);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -202,7 +202,7 @@
   .overlay{
     position:fixed;
     inset:0;
-    background:rgba(20,25,30,0.45);
+    background:rgba(5,3,3,0.75);
     z-index:30;
     display:flex;
     align-items:flex-end;
@@ -249,7 +249,7 @@
   input[type=text], input[type=date], input[type=time], textarea{
     width:100%;
     border:1px solid var(--line);
-    background:#fff;
+    background:var(--paper-2);
     border-radius:10px;
     padding:11px 12px;
     font-size:15px;
@@ -275,7 +275,7 @@
   .photo-btn{
     border:1px solid var(--navy);
     color:var(--navy);
-    background:#fff;
+    background:var(--paper-2);
     border-radius:8px;
     padding:8px 12px;
     font-size:13px;
@@ -322,7 +322,7 @@
   .add-note-btn{
     width:100%;
     border:1.5px dashed var(--navy);
-    background:#fff;
+    background:var(--paper-2);
     color:var(--navy);
     border-radius:10px;
     padding:11px;
@@ -332,7 +332,7 @@
   }
 
   .note-item{
-    background:#fff;
+    background:var(--paper-2);
     border:1px solid var(--line);
     border-left:4px solid var(--coral);
     border-radius:10px;
@@ -364,13 +364,13 @@
     height:min(62vw, 260px);
     border-radius:50%;
     background:var(--paper-2);
-    border:4px solid #fff;
-    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    border:4px solid var(--coral);
+    box-shadow:0 0 40px rgba(139,26,26,0.5), 0 10px 30px rgba(0,0,0,0.6);
     display:flex;
     align-items:center;
     justify-content:center;
     overflow:hidden;
-    color:var(--navy);
+    color:var(--coral);
     font-weight:700;
     font-size:64px;
     font-family:'Noto Serif KR',serif;
@@ -379,7 +379,7 @@
   }
   .zoom-photo img{width:100%;height:100%;object-fit:cover;}
   .zoom-name{
-    color:#fff;
+    color:#EDE3D6;
     font-family:'Noto Serif KR',serif;
     font-size:24px;
     font-weight:700;
@@ -387,12 +387,12 @@
     text-align:center;
   }
   .zoom-num{
-    color:#D7DEE6;
+    color:#B8A79C;
     font-size:15px;
     margin-bottom:18px;
   }
   .zoom-hint{
-    color:#8FA0B3;
+    color:#7A6E66;
     font-size:12px;
   }
 
@@ -409,7 +409,7 @@
     justify-content:center;
     flex-direction:column;
     cursor:pointer;
-    transition:opacity .5s ease;
+    transition:opacity 1.3s cubic-bezier(.4,0,.2,1);
   }
   #splashScreen.hide{
     opacity:0;
@@ -427,6 +427,11 @@
   .splash-inner{
     text-align:center;
     padding:0 24px;
+    transition:transform 1.3s cubic-bezier(.4,0,.2,1), filter 1.3s ease;
+  }
+  #splashScreen.hide .splash-inner{
+    transform:scale(0.92);
+    filter:blur(8px);
   }
   .splash-en-title{
     font-family:'Nosifer', cursive;
@@ -477,10 +482,12 @@
   }
   #mainApp{
     opacity:0;
+    transform:scale(1.015);
   }
   #mainApp.reveal{
     opacity:1;
-    transition:opacity .5s ease;
+    transform:scale(1);
+    transition:opacity 1s ease, transform 1s ease;
   }
   .note-meta{
     font-size:11px;
@@ -531,19 +538,19 @@
     bottom:88px;
     width:48px;height:48px;
     border-radius:50%;
-    background:#fff;
+    background:var(--paper-2);
     color:var(--navy);
     border:1.5px solid var(--navy);
     font-size:19px;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 6px 16px rgba(29,43,61,0.2);
+    box-shadow:0 6px 16px rgba(80,10,10,0.35);
     z-index:15;
   }
   .batch-fab:active{transform:scale(0.94);}
 
   .batch-target{
     display:flex;align-items:center;gap:10px;
-    background:#fff;border:1px solid var(--line);border-radius:12px;
+    background:var(--paper-2);border:1px solid var(--line);border-radius:12px;
     padding:9px 10px;margin-bottom:10px;
   }
   .batch-target .photo{margin-bottom:0;width:42px;height:42px;font-size:14px;flex-shrink:0;}
@@ -552,19 +559,19 @@
   .batch-target-name{font-size:14.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   #batchJumpSelect{
     border:1px solid var(--line);border-radius:8px;font-size:11px;
-    padding:5px 4px;max-width:92px;background:#fff;color:var(--ink-soft);flex-shrink:0;
+    padding:5px 4px;max-width:92px;background:var(--paper-2);color:var(--ink-soft);flex-shrink:0;
   }
 
   .zoom-controls{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
   .zoom-controls button{
     width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
-    background:#fff;font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0;
+    background:var(--paper-2);font-size:15px;font-weight:700;color:var(--navy);flex-shrink:0;
   }
   .zoom-controls #zoomLabel{font-size:11.5px;color:var(--ink-soft);min-width:36px;text-align:center;}
   .mode-toggle{
     border:1px solid var(--navy) !important;
     color:var(--navy);
-    background:#fff;
+    background:var(--paper-2);
     border-radius:16px !important;
     padding:0 12px !important;
     font-size:12px !important;
@@ -572,7 +579,7 @@
     width:auto !important;
     height:30px !important;
   }
-  .mode-toggle.active{background:var(--coral);border-color:var(--coral) !important;color:#fff;}
+  .mode-toggle.active{background:var(--coral);border-color:var(--coral) !important;color:#1A1410;}
   .batch-progress{margin-left:auto;font-size:11.5px;color:var(--ink-soft);font-weight:600;}
 
   .crop-stage{
@@ -596,7 +603,7 @@
   .batch-page-nav span{font-size:12px;color:var(--ink-soft);}
 
   .block-card{
-    background:#fff;
+    background:var(--paper-2);
     border:1px solid var(--line);
     border-left:4px solid var(--navy);
     border-radius:10px;
@@ -631,7 +638,7 @@
     border-radius:7px;
     padding:6px 5px;
     font-size:12px;
-    background:#fbfaf7;
+    background:var(--paper-2);
   }
 </style>
 </head>
@@ -661,8 +668,8 @@
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
     <h1 id="titleRefresh" style="cursor:pointer;">📕 심판의 노트</h1>
     <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button id="consolidateBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
-      <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
+      <button id="consolidateBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
+      <button id="resetAllBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
     </div>
   </div>
   <div class="sub">특이사항을 그때그때 기록해두세요</div>
@@ -777,7 +784,7 @@
         </div>
 
         <label>미리보기</label>
-        <div id="excelPreview" style="overflow:auto;max-height:26vh;border:1px solid var(--line);border-radius:10px;background:#fff;"></div>
+        <div id="excelPreview" style="overflow:auto;max-height:26vh;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);"></div>
 
         <div class="btn-row">
           <button class="btn btn-primary" id="excelImportBtn">이 조건으로 학생 추가</button>
@@ -802,7 +809,7 @@
 
     <label>학년 / 반 / 번호</label>
     <div style="display:flex;gap:8px;">
-      <select id="studentGrade" style="flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 8px;font-size:15px;">
+      <select id="studentGrade" style="flex:1;border:1px solid var(--line);background:var(--paper-2);border-radius:10px;padding:11px 8px;font-size:15px;">
         <option value="1">1학년</option>
         <option value="2">2학년</option>
         <option value="3">3학년</option>
@@ -2159,7 +2166,9 @@ $('#titleRefresh').addEventListener('click', ()=>{
 
 $('#splashScreen').addEventListener('click', ()=>{
   $('#splashScreen').classList.add('hide');
-  $('#mainApp').classList.add('reveal');
+  setTimeout(()=>{
+    $('#mainApp').classList.add('reveal');
+  }, 650);
 });
 
 loadData();
