@@ -402,8 +402,8 @@
     inset:0;
     z-index:999;
     background:
-      radial-gradient(ellipse at 50% 75%, rgba(120,10,10,0.35) 0%, rgba(0,0,0,0) 55%),
-      radial-gradient(ellipse at 50% 50%, #1a1a1a 0%, #050505 70%);
+      radial-gradient(ellipse at 50% 100%, rgba(200,40,10,0.55) 0%, rgba(120,10,10,0.25) 30%, rgba(0,0,0,0) 62%),
+      radial-gradient(ellipse at 50% 50%, #1e1108 0%, #050302 72%);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -424,14 +424,60 @@
     opacity:0.5;
     pointer-events:none;
   }
+  #splashScreen::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background:radial-gradient(ellipse at 50% 105%, rgba(255,110,20,0.5) 0%, rgba(200,30,10,0.22) 35%, transparent 65%);
+    pointer-events:none;
+    animation:hellGlow 2.6s ease-in-out infinite;
+    mix-blend-mode:screen;
+  }
+  @keyframes hellGlow{
+    0%,100%{ opacity:0.55; }
+    35%{ opacity:1; }
+    60%{ opacity:0.7; }
+    80%{ opacity:0.95; }
+  }
   .splash-inner{
     text-align:center;
     padding:0 24px;
+    position:relative;
+    z-index:2;
     transition:transform 1.3s cubic-bezier(.4,0,.2,1), filter 1.3s ease;
   }
   #splashScreen.hide .splash-inner{
     transform:scale(0.92);
     filter:blur(8px);
+  }
+  .ember-field{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    z-index:1;
+    pointer-events:none;
+  }
+  .ember{
+    position:absolute;
+    top:-5%;
+    border-radius:50%;
+    background:radial-gradient(circle, #fff3d6 0%, #ffb238 22%, #ff6a1a 45%, #b81c1c 72%, transparent 100%);
+    box-shadow:0 0 10px 2px rgba(255,120,20,0.85), 0 0 22px 6px rgba(200,30,10,0.4);
+    animation-name:emberFall, emberFlicker;
+    animation-timing-function:linear, ease-in-out;
+    animation-iteration-count:infinite, infinite;
+  }
+  @keyframes emberFall{
+    0%{ transform:translate(0, 0) rotate(0deg); opacity:0; }
+    8%{ opacity:1; }
+    50%{ transform:translate(var(--drift), 55vh) rotate(180deg); }
+    92%{ opacity:0.9; }
+    100%{ transform:translate(calc(var(--drift) * 2), 112vh) rotate(360deg); opacity:0; }
+  }
+  @keyframes emberFlicker{
+    0%,100%{ filter:brightness(0.65) saturate(1.1); }
+    50%{ filter:brightness(1.85) saturate(1.4); }
   }
   .splash-en-title{
     font-family:'Nosifer', cursive;
@@ -464,21 +510,23 @@
   }
   .splash-tagline{
     margin-top:6px;
-    color:#8a2020;
+    color:#D9A9A0;
     font-family:'Noto Serif KR', serif;
     font-size:14px;
     letter-spacing:3px;
+    text-shadow:0 0 12px rgba(139,26,26,0.7), 0 2px 3px rgba(0,0,0,0.8);
   }
   .splash-hint{
     margin-top:46px;
-    color:#5a5a5a;
+    color:#B8ACA4;
     font-size:12px;
     letter-spacing:1px;
+    text-shadow:0 2px 4px rgba(0,0,0,0.8);
     animation:splashPulse 2.2s ease-in-out infinite;
   }
   @keyframes splashPulse{
-    0%,100%{opacity:0.35;}
-    50%{opacity:0.9;}
+    0%,100%{opacity:0.5;}
+    50%{opacity:1;}
   }
   #mainApp{
     opacity:0;
@@ -646,6 +694,7 @@
 
 <!-- 시작 화면 -->
 <div id="splashScreen">
+  <div id="emberField" class="ember-field"></div>
   <div class="splash-inner">
     <div class="splash-en-title">DEATH NOTE</div>
     <svg class="splash-logo" viewBox="0 0 460 150" xmlns="http://www.w3.org/2000/svg">
@@ -2170,6 +2219,31 @@ $('#splashScreen').addEventListener('click', ()=>{
     $('#mainApp').classList.add('reveal');
   }, 650);
 });
+
+// 시작 화면에 타오르는 재(불씨) 입자 효과
+(function spawnEmbers(){
+  const field = $('#emberField');
+  if(!field) return;
+  const count = 55;
+  for(let i = 0; i < count; i++){
+    const el = document.createElement('div');
+    el.className = 'ember';
+    const left = Math.random() * 100;
+    const size = 1.5 + Math.random() * 6;
+    const fallDuration = 6 + Math.random() * 7;
+    const fallDelay = -(Math.random() * fallDuration);
+    const flickerDuration = 0.35 + Math.random() * 0.7;
+    const flickerDelay = -(Math.random() * flickerDuration);
+    const drift = (Math.random() * 90 - 45).toFixed(1) + 'px';
+    el.style.left = left + '%';
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.setProperty('--drift', drift);
+    el.style.animationDuration = `${fallDuration}s, ${flickerDuration}s`;
+    el.style.animationDelay = `${fallDelay}s, ${flickerDelay}s`;
+    field.appendChild(el);
+  }
+})();
 
 loadData();
 </script>
