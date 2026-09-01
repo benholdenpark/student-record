@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>학생 기록장</title>
+<title>심판의 노트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=Nosifer&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#FAF6EF;
@@ -428,11 +428,24 @@
     text-align:center;
     padding:0 24px;
   }
+  .splash-en-title{
+    font-family:'Nosifer', cursive;
+    font-weight:400;
+    font-size:38px;
+    color:#c41818;
+    letter-spacing:3px;
+    text-shadow:
+      0 0 10px rgba(196,24,24,0.65),
+      0 0 24px rgba(196,24,24,0.35),
+      2px 2px 0 #1a0000;
+    margin-bottom:2px;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+  }
   .splash-logo{
     width:min(88vw, 460px);
     height:auto;
     display:block;
-    margin:0 auto;
+    margin:6px auto 0;
     filter:drop-shadow(0 0 18px rgba(160,10,10,0.55));
   }
   .splash-title{
@@ -627,6 +640,7 @@
 <!-- 시작 화면 -->
 <div id="splashScreen">
   <div class="splash-inner">
+    <div class="splash-en-title">DEATH NOTE</div>
     <svg class="splash-logo" viewBox="0 0 460 150" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <filter id="dripFilter" x="-30%" y="-30%" width="160%" height="220%">
@@ -636,7 +650,7 @@
       </defs>
       <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="splash-title" filter="url(#dripFilter)">심판의 노트</text>
     </svg>
-    <div class="splash-tagline">S T U D E N T &nbsp; J U D G M E N T &nbsp; N O T E</div>
+    <div class="splash-tagline">이 노트에 적히는 순간, 기록은 시작된다</div>
     <div class="splash-hint">화면을 눌러 입장하세요</div>
   </div>
 </div>
@@ -645,7 +659,7 @@
 
 <header>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-    <h1 id="titleRefresh" style="cursor:pointer;">📓 학생 기록장</h1>
+    <h1 id="titleRefresh" style="cursor:pointer;">📕 심판의 노트</h1>
     <div style="display:flex;gap:6px;flex-shrink:0;">
       <button id="consolidateBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
       <button id="resetAllBtn" style="background:none;border:1px solid rgba(255,255,255,0.25);color:#B9C4D0;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
