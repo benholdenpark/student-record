@@ -606,7 +606,31 @@
     height:auto;
     display:block;
     margin:6px auto 0;
-    filter:drop-shadow(0 0 18px rgba(160,10,10,0.55));
+    opacity:0;
+    animation:titleBang 0.9s cubic-bezier(.22,1.3,.3,1) forwards;
+    animation-delay:3s;
+  }
+  @keyframes titleBang{
+    0%{ opacity:0; transform:scale(0.25); filter:drop-shadow(0 0 8px rgba(160,10,10,0.3)) brightness(3.2); }
+    45%{ opacity:1; transform:scale(1.18); filter:drop-shadow(0 0 34px rgba(200,20,20,0.95)) brightness(2); }
+    68%{ transform:scale(0.93); filter:drop-shadow(0 0 22px rgba(160,10,10,0.7)) brightness(1.2); }
+    85%{ transform:scale(1.03); }
+    100%{ opacity:1; transform:scale(1); filter:drop-shadow(0 0 18px rgba(160,10,10,0.55)) brightness(1); }
+  }
+  .reveal-flash{
+    position:absolute;
+    inset:0;
+    z-index:3;
+    pointer-events:none;
+    background:radial-gradient(circle at 50% 42%, rgba(255,150,120,0.9) 0%, rgba(200,30,10,0.4) 35%, transparent 70%);
+    opacity:0;
+    animation:flashBang 0.9s ease-out forwards;
+    animation-delay:3s;
+  }
+  @keyframes flashBang{
+    0%{ opacity:0; }
+    8%{ opacity:0.9; }
+    100%{ opacity:0; }
   }
   .splash-title{
     font-family:'Noto Serif KR', serif;
@@ -802,6 +826,7 @@
 <!-- 시작 화면 -->
 <div id="splashScreen">
   <div id="emberField" class="ember-field"></div>
+  <div class="reveal-flash"></div>
   <div class="splash-inner">
     <div class="splash-en-title">DEATH NOTE</div>
     <svg class="splash-logo" viewBox="0 0 460 150" xmlns="http://www.w3.org/2000/svg">
@@ -2472,13 +2497,15 @@ $('#splashScreen').addEventListener('click', ()=>{
   }
 })();
 
-// "DEATH NOTE" 글자가 한 글자씩 튀어나오며 등장
+// "DEATH NOTE" 글자가 한 글자씩 튀어나오며 등장 -> 끝나면 "심판의 노트"가 짠 하고 등장
 (function animateSplashTitle(){
   const el = document.querySelector('.splash-en-title');
   if(!el) return;
   const text = el.textContent;
   el.textContent = '';
   let visibleIndex = 0;
+  const letterStagger = 0.22;
+  const letterDuration = 1.1;
   [...text].forEach((ch)=>{
     if(ch === ' '){
       el.appendChild(document.createTextNode('\u00A0'));
@@ -2487,10 +2514,18 @@ $('#splashScreen').addEventListener('click', ()=>{
     const span = document.createElement('span');
     span.textContent = ch;
     span.className = 'letter-pop';
-    span.style.animationDelay = (visibleIndex * 0.22) + 's';
+    span.style.animationDelay = (visibleIndex * letterStagger) + 's';
     el.appendChild(span);
     visibleIndex++;
   });
+
+  // DEATH NOTE 애니메이션이 끝나는 시점 + 약간의 정적 이후 "심판의 노트"가 등장
+  const deathNoteEnd = (visibleIndex - 1) * letterStagger + letterDuration;
+  const titleDelay = deathNoteEnd + 0.25;
+  const logoEl = document.querySelector('.splash-logo');
+  const flashEl = document.querySelector('.reveal-flash');
+  if(logoEl) logoEl.style.animationDelay = titleDelay + 's';
+  if(flashEl) flashEl.style.animationDelay = titleDelay + 's';
 })();
 
 loadData();
