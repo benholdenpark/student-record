@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content">
 <title>심판의 노트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=Nosifer&display=swap" rel="stylesheet">
@@ -239,6 +239,7 @@
     background:var(--paper);
     width:100%;
     max-height:88vh;
+    max-height:88dvh;
     border-radius:20px 20px 0 0;
     padding:18px 18px calc(18px + env(safe-area-inset-bottom));
     overflow-y:auto;
@@ -1478,6 +1479,17 @@ $('#quickSaveNoteBtn').addEventListener('click', async ()=>{
   renderNotes();
   render();
   showToast('저장했어요');
+});
+
+// 모바일 키보드가 올라올 때 입력창이 가려지지 않도록, 포커스된 필드를 화면 안으로 스크롤
+['quickNoteDate', 'quickNoteTime', 'quickNoteContent'].forEach(id=>{
+  const el = $('#' + id);
+  if(!el) return;
+  el.addEventListener('focus', ()=>{
+    setTimeout(()=>{
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 300);
+  });
 });
 
 function openEditNote(noteId){
