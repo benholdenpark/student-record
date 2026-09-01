@@ -132,9 +132,32 @@
     text-align:center;
     position:relative;
     cursor:pointer;
-    transition:transform .12s ease, box-shadow .12s ease;
+    transition:transform .12s ease, box-shadow .12s ease, background .3s ease, border-color .3s ease;
   }
   .card:active{transform:scale(0.97);}
+
+  /* 특이사항이 쌓일수록 카드(사진을 둘러싼 네모 배경)가 붉게 빛나는 연출 */
+  .card.card-glow-1{
+    background:radial-gradient(circle at 50% 28%, rgba(139,26,26,0.32), var(--paper-2) 72%);
+    border-color:#8a1f1f;
+    box-shadow:0 0 10px 1px rgba(139,26,26,0.4);
+  }
+  .card.card-glow-2{
+    background:radial-gradient(circle at 50% 28%, rgba(180,20,20,0.46), var(--paper-2) 72%);
+    border-color:#a81c1c;
+    box-shadow:0 0 16px 3px rgba(180,20,20,0.6);
+  }
+  .card.card-glow-3{
+    background:radial-gradient(circle at 50% 28%, rgba(220,20,20,0.6), var(--paper-2) 72%);
+    border-color:#e23c3c;
+    box-shadow:0 0 22px 5px rgba(220,20,20,0.8);
+    animation:cardGlowPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes cardGlowPulse{
+    0%,100%{ box-shadow:0 0 16px 3px rgba(220,20,20,0.6); }
+    50%{ box-shadow:0 0 30px 9px rgba(220,20,20,1); }
+  }
+
   .photo{
     width:64px;
     height:64px;
@@ -151,42 +174,9 @@
     font-size:20px;
     font-family:'Noto Serif KR',serif;
     flex-shrink:0;
-    transition:box-shadow .3s ease, border-color .3s ease;
   }
   .photo img{width:100%;height:100%;object-fit:cover;}
 
-  /* 특이사항이 쌓일수록 사진 칸이 붉게 빛나는 연출 */
-  .photo.photo-glow-1{
-    border-color:#8a1f1f;
-    box-shadow:
-      inset 0 0 10px 2px rgba(139,26,26,0.35),
-      0 0 8px 1px rgba(139,26,26,0.45);
-  }
-  .photo.photo-glow-2{
-    border-color:#a81c1c;
-    box-shadow:
-      inset 0 0 14px 4px rgba(180,20,20,0.55),
-      0 0 14px 3px rgba(180,20,20,0.65);
-  }
-  .photo.photo-glow-3{
-    border-color:#e23c3c;
-    box-shadow:
-      inset 0 0 18px 6px rgba(220,20,20,0.7),
-      0 0 20px 6px rgba(220,20,20,0.85);
-    animation:photoGlowPulse 1.8s ease-in-out infinite;
-  }
-  @keyframes photoGlowPulse{
-    0%,100%{
-      box-shadow:
-        inset 0 0 18px 6px rgba(220,20,20,0.55),
-        0 0 16px 5px rgba(220,20,20,0.65);
-    }
-    50%{
-      box-shadow:
-        inset 0 0 24px 9px rgba(220,20,20,0.9),
-        0 0 30px 10px rgba(220,20,20,1);
-    }
-  }
   .card .name{font-weight:600;font-size:14px;}
   .card .num{
     font-size:11px;
@@ -355,9 +345,9 @@
 
   .add-note-btn{
     width:100%;
-    border:1.5px dashed var(--navy);
+    border:1.5px dashed var(--coral);
     background:var(--paper-2);
-    color:var(--navy);
+    color:var(--coral);
     border-radius:10px;
     padding:11px;
     font-weight:700;
@@ -1189,10 +1179,10 @@ function render(){
   filtered.forEach(s=>{
     const noteCount = (notes[s.id] || []).length;
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = `card ${cardGlowClass(noteCount)}`;
     card.innerHTML = `
       ${noteCount > 0 ? `<div class="note-badge">${noteCount}</div>` : ''}
-      <div class="photo ${photoGlowClass(noteCount)}">${s.photo ? `<img src="${s.photo}">` : initials(s.name)}</div>
+      <div class="photo">${s.photo ? `<img src="${s.photo}">` : initials(s.name)}</div>
       <div class="name">${escapeHtml(s.name)}</div>
       <div class="num">${escapeHtml(studentLabel(s))}</div>
     `;
@@ -1201,10 +1191,10 @@ function render(){
   });
 }
 
-function photoGlowClass(noteCount){
-  if(noteCount >= 6) return 'photo-glow-3';
-  if(noteCount >= 3) return 'photo-glow-2';
-  if(noteCount >= 1) return 'photo-glow-1';
+function cardGlowClass(noteCount){
+  if(noteCount >= 6) return 'card-glow-3';
+  if(noteCount >= 3) return 'card-glow-2';
+  if(noteCount >= 1) return 'card-glow-1';
   return '';
 }
 
@@ -1320,14 +1310,6 @@ $('#deleteStudentBtn').addEventListener('click', async ()=>{
 });
 
 // ---------- Detail / notes ----------
-function updateDetailPhotoGlow(){
-  const noteCount = (notes[currentStudentId] || []).length;
-  const el = $('#detailPhoto');
-  el.classList.remove('photo-glow-1', 'photo-glow-2', 'photo-glow-3');
-  const cls = photoGlowClass(noteCount);
-  if(cls) el.classList.add(cls);
-}
-
 function openDetail(studentId){
   currentStudentId = studentId;
   const s = roster.find(x=>x.id===studentId);
@@ -1336,7 +1318,6 @@ function openDetail(studentId){
   $('#detailName').textContent = s.name;
   $('#detailNum').textContent = studentLabel(s);
   renderNotes();
-  updateDetailPhotoGlow();
   openOverlay('detailOverlay');
 }
 
@@ -1398,7 +1379,6 @@ function renderNotes(){
     return dtB.localeCompare(dtA);
   });
   $('#mergeNotesBtn').style.display = arr.length >= 2 ? 'inline-block' : 'none';
-  updateDetailPhotoGlow();
 
   list.innerHTML = '';
 
