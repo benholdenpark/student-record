@@ -254,15 +254,62 @@
     flex-direction:column;
     padding-bottom:0;
     overflow:hidden;
+    position:relative;
+    transition:background .4s ease;
   }
   .detail-sheet-fixed{
     flex-shrink:0;
+    position:relative;
+    z-index:1;
   }
   .detail-sheet-scroll{
     overflow-y:auto;
     flex:1;
     min-height:80px;
     padding-bottom:calc(18px + env(safe-area-inset-bottom));
+    position:relative;
+    z-index:1;
+  }
+
+  /* 학생 개인 화면도 기록이 쌓일수록 배경이 붉게 물듦 */
+  .detail-sheet.sheet-glow-1{
+    background:radial-gradient(ellipse at 50% 0%, rgba(139,26,26,0.25), var(--paper) 55%);
+  }
+  .detail-sheet.sheet-glow-2{
+    background:radial-gradient(ellipse at 50% 0%, rgba(180,20,20,0.38), var(--paper) 55%);
+  }
+  .detail-sheet.sheet-glow-3{
+    background:radial-gradient(ellipse at 50% 0%, rgba(220,20,20,0.5), var(--paper) 55%);
+    animation:sheetGlowPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes sheetGlowPulse{
+    0%,100%{ background:radial-gradient(ellipse at 50% 0%, rgba(220,20,20,0.4), var(--paper) 55%); }
+    50%{ background:radial-gradient(ellipse at 50% 0%, rgba(220,20,20,0.68), var(--paper) 55%); }
+  }
+
+  /* 학생 개인 화면에도 기록 개수에 따라 단계별로 타오르는 입자 */
+  .detail-ember-field{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    z-index:0;
+    pointer-events:none;
+  }
+  .detail-ember{
+    position:absolute;
+    border-radius:50%;
+    background:radial-gradient(circle, #fff3d6 0%, #ffb238 22%, #ff6a1a 45%, #b81c1c 72%, transparent 100%);
+    box-shadow:0 0 8px 2px rgba(255,120,20,0.7), 0 0 14px 4px rgba(200,30,10,0.35);
+    animation-name:detailEmberFall, emberFlicker;
+    animation-timing-function:linear, ease-in-out;
+    animation-iteration-count:infinite, infinite;
+  }
+  @keyframes detailEmberFall{
+    0%{ top:-6%; opacity:0; transform:translateX(0) rotate(0deg); }
+    8%{ opacity:1; }
+    50%{ top:55%; transform:translateX(var(--drift)) rotate(180deg); }
+    92%{ opacity:0.9; }
+    100%{ top:112%; transform:translateX(calc(var(--drift) * 2)) rotate(360deg); opacity:0; }
   }
   .sheet-handle{
     width:36px;height:4px;background:var(--line);border-radius:2px;
@@ -921,6 +968,7 @@
 <!-- 학생 상세 / 특이사항 시트 -->
 <div class="overlay" id="detailOverlay">
   <div class="sheet detail-sheet">
+    <div class="detail-ember-field" id="detailEmberField"></div>
     <div class="detail-sheet-fixed">
       <div class="sheet-handle"></div>
       <h2><span>학생 기록</span><button class="close-x" data-close="detailOverlay">✕</button></h2>
@@ -1222,6 +1270,55 @@ function cardGlowClass(noteCount){
   return '';
 }
 
+function sheetGlowClass(noteCount){
+  if(noteCount >= 6) return 'sheet-glow-3';
+  if(noteCount >= 3) return 'sheet-glow-2';
+  if(noteCount >= 1) return 'sheet-glow-1';
+  return '';
+}
+
+function updateDetailSheetGlow(){
+  const el = document.querySelector('#detailOverlay .detail-sheet');
+  if(!el) return;
+  const noteCount = (notes[currentStudentId] || []).length;
+  el.classList.remove('sheet-glow-1', 'sheet-glow-2', 'sheet-glow-3');
+  const cls = sheetGlowClass(noteCount);
+  if(cls) el.classList.add(cls);
+  spawnDetailEmbers(noteCount);
+}
+
+function detailEmberCount(noteCount){
+  if(noteCount >= 6) return 22;
+  if(noteCount >= 3) return 13;
+  if(noteCount >= 1) return 6;
+  return 0;
+}
+
+function spawnDetailEmbers(noteCount){
+  const field = $('#detailEmberField');
+  if(!field) return;
+  field.innerHTML = '';
+  const count = detailEmberCount(noteCount);
+  for(let i = 0; i < count; i++){
+    const el = document.createElement('div');
+    el.className = 'detail-ember';
+    const left = Math.random() * 100;
+    const size = 2 + Math.random() * 4;
+    const fallDuration = 5 + Math.random() * 6;
+    const fallDelay = -(Math.random() * fallDuration);
+    const flickerDuration = 0.35 + Math.random() * 0.6;
+    const flickerDelay = -(Math.random() * flickerDuration);
+    const drift = (Math.random() * 40 - 20).toFixed(1) + 'px';
+    el.style.left = left + '%';
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.setProperty('--drift', drift);
+    el.style.animationDuration = `${fallDuration}s, ${flickerDuration}s`;
+    el.style.animationDelay = `${fallDelay}s, ${flickerDelay}s`;
+    field.appendChild(el);
+  }
+}
+
 function initials(name){
   if(!name) return '?';
   return name.trim().slice(-1);
@@ -1345,6 +1442,7 @@ function openDetail(studentId){
   $('#quickNoteTime').value = nowStr();
   $('#quickNoteContent').value = '';
   renderNotes();
+  updateDetailSheetGlow();
   openOverlay('detailOverlay');
   // 기록 목록의 스크롤 위치를 초기화 (입력 폼 자체는 항상 고정되어 있음)
   const notesListEl = $('#notesList');
@@ -1409,6 +1507,7 @@ function renderNotes(){
     return dtB.localeCompare(dtA);
   });
   $('#mergeNotesBtn').style.display = arr.length >= 2 ? 'inline-block' : 'none';
+  updateDetailSheetGlow();
 
   list.innerHTML = '';
 
