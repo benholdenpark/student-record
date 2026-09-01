@@ -131,6 +131,7 @@
     align-items:center;
     text-align:center;
     position:relative;
+    isolation:isolate;
     cursor:pointer;
     transition:transform .12s ease, box-shadow .12s ease, background .3s ease, border-color .3s ease;
   }
@@ -156,6 +157,14 @@
   @keyframes cardGlowPulse{
     0%,100%{ box-shadow:0 0 16px 3px rgba(220,20,20,0.6); }
     50%{ box-shadow:0 0 30px 9px rgba(220,20,20,1); }
+  }
+  .card-ember-layer{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    border-radius:var(--radius);
+    z-index:-1;
+    pointer-events:none;
   }
 
   .photo{
@@ -1253,6 +1262,7 @@ function render(){
     const card = document.createElement('div');
     card.className = `card ${cardGlowClass(noteCount)}`;
     card.innerHTML = `
+      ${noteCount > 0 ? `<div class="card-ember-layer">${cardEmberMarkup(noteCount)}</div>` : ''}
       ${noteCount > 0 ? `<div class="note-badge">${noteCount}</div>` : ''}
       <div class="photo">${s.photo ? `<img src="${s.photo}">` : initials(s.name)}</div>
       <div class="name">${escapeHtml(s.name)}</div>
@@ -1268,6 +1278,29 @@ function cardGlowClass(noteCount){
   if(noteCount >= 3) return 'card-glow-2';
   if(noteCount >= 1) return 'card-glow-1';
   return '';
+}
+
+function cardEmberCount(noteCount){
+  if(noteCount >= 6) return 8;
+  if(noteCount >= 3) return 5;
+  if(noteCount >= 1) return 3;
+  return 0;
+}
+
+function cardEmberMarkup(noteCount){
+  const count = cardEmberCount(noteCount);
+  let html = '';
+  for(let i = 0; i < count; i++){
+    const left = (Math.random() * 100).toFixed(1);
+    const size = (1 + Math.random() * 1.8).toFixed(1);
+    const fallDuration = (4 + Math.random() * 4).toFixed(2);
+    const fallDelay = (-(Math.random() * fallDuration)).toFixed(2);
+    const flickerDuration = (0.35 + Math.random() * 0.5).toFixed(2);
+    const flickerDelay = (-(Math.random() * flickerDuration)).toFixed(2);
+    const drift = (Math.random() * 24 - 12).toFixed(1);
+    html += `<div class="detail-ember" style="left:${left}%;width:${size}px;height:${size}px;--drift:${drift}px;animation-duration:${fallDuration}s, ${flickerDuration}s;animation-delay:${fallDelay}s, ${flickerDelay}s;"></div>`;
+  }
+  return html;
 }
 
 function sheetGlowClass(noteCount){
