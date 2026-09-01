@@ -588,6 +588,17 @@
     margin-bottom:2px;
     filter:drop-shadow(0 4px 6px rgba(0,0,0,0.6));
   }
+  .letter-pop{
+    display:inline-block;
+    opacity:0;
+    animation:letterPop 0.65s cubic-bezier(.17,.84,.44,1) forwards;
+  }
+  @keyframes letterPop{
+    0%{ opacity:0; transform:scale(2.6) rotate(-10deg); filter:blur(5px); }
+    55%{ opacity:1; filter:blur(0); }
+    75%{ transform:scale(0.88) rotate(3deg); }
+    100%{ opacity:1; transform:scale(1) rotate(0deg); filter:blur(0); }
+  }
   .splash-logo{
     width:min(88vw, 460px);
     height:auto;
@@ -2457,6 +2468,27 @@ $('#splashScreen').addEventListener('click', ()=>{
     el.style.animationDelay = `${fallDelay}s, ${flickerDelay}s`;
     field.appendChild(el);
   }
+})();
+
+// "DEATH NOTE" 글자가 한 글자씩 튀어나오며 등장
+(function animateSplashTitle(){
+  const el = document.querySelector('.splash-en-title');
+  if(!el) return;
+  const text = el.textContent;
+  el.textContent = '';
+  let visibleIndex = 0;
+  [...text].forEach((ch)=>{
+    if(ch === ' '){
+      el.appendChild(document.createTextNode('\u00A0'));
+      return;
+    }
+    const span = document.createElement('span');
+    span.textContent = ch;
+    span.className = 'letter-pop';
+    span.style.animationDelay = (visibleIndex * 0.09) + 's';
+    el.appendChild(span);
+    visibleIndex++;
+  });
 })();
 
 loadData();
