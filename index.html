@@ -2654,8 +2654,8 @@ $('#splashScreen').addEventListener('click', ()=>{
 });
 
 // 시작 화면 방문자 집계 - Google Apps Script(Ben 소유의 구글 시트) 기준으로 실제 방문자 수를 집계
-// 아래 URL을 배포된 Apps Script 웹 앱 주소로 바꿔야 작동해요. 설정 전까지는 이 기기 기준 로컬 집계로 대체돼요.
-const VISIT_COUNTER_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+// Apps Script는 다른 도메인에서의 fetch 요청에 CORS 헤더를 주지 않으므로 JSONP 방식으로 우회
+const VISIT_COUNTER_URL = 'https://script.google.com/macros/s/AKfycbzZ3n8xEgV1hJ-VXlterF0PRAYZKh9Lu5Qr4aPHZ6pz_1jiDqSs99XDdN9Hmuo-w8bQ/exec';
 
 (function updateVisitStats(){
   const today = todayStr();
@@ -2684,14 +2684,36 @@ const VISIT_COUNTER_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
     return;
   }
 
-  fetch(VISIT_COUNTER_URL)
-    .then(r => r.json())
-    .then(data => {
-      if(el) el.innerHTML = `오늘 <b>${data.today}</b> · 전체 <b>${data.total}</b>`;
-    })
-    .catch(()=>{
+  // JSONP: <script> 태그로 불러오면 CORS 제약을 받지 않음
+  const cbName = 'visitStatsCb_' + Date.now();
+  let settled = false;
+  const timeoutId = setTimeout(()=>{
+    if(!settled){
+      settled = true;
       showLocalFallback();
-    });
+    }
+  }, 5000);
+
+  window[cbName] = function(data){
+    if(settled) return;
+    settled = true;
+    clearTimeout(timeoutId);
+    if(el) el.innerHTML = `오늘 <b>${data.today}</b> · 전체 <b>${data.total}</b>`;
+    delete window[cbName];
+    script.remove();
+  };
+
+  const script = document.createElement('script');
+  script.src = VISIT_COUNTER_URL + '?callback=' + cbName;
+  script.onerror = function(){
+    if(settled) return;
+    settled = true;
+    clearTimeout(timeoutId);
+    showLocalFallback();
+    delete window[cbName];
+    script.remove();
+  };
+  document.body.appendChild(script);
 })();
 
 // 시작 화면에 타오르는 재(불씨) 입자 효과
