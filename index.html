@@ -657,6 +657,17 @@
     text-shadow:0 2px 4px rgba(0,0,0,0.8);
     animation:splashPulse 2.2s ease-in-out infinite;
   }
+  .splash-stats{
+    margin-top:14px;
+    color:#7A6E66;
+    font-size:11px;
+    letter-spacing:0.5px;
+    text-shadow:0 2px 4px rgba(0,0,0,0.8);
+  }
+  .splash-stats b{
+    color:#C9A227;
+    font-weight:700;
+  }
   @keyframes splashPulse{
     0%,100%{opacity:0.5;}
     50%{opacity:1;}
@@ -840,6 +851,7 @@
     </svg>
     <div class="splash-tagline">이 노트에 적히는 순간, 기록은 시작된다</div>
     <div class="splash-hint">화면을 눌러 입장하세요</div>
+    <div class="splash-stats" id="splashStats"></div>
   </div>
 </div>
 
@@ -893,8 +905,56 @@
     <h2><span>학생 추가</span><button class="close-x" data-close="addChoiceOverlay">✕</button></h2>
     <div class="btn-row" style="margin-top:0;flex-direction:column;">
       <button class="btn btn-primary" id="chooseManualAddBtn" style="margin-bottom:8px;">✏️ 학생 한 명씩 직접 추가</button>
-      <button class="btn btn-ghost" id="chooseExcelImportBtn">📄 엑셀 명렬표로 한번에 추가</button>
+      <button class="btn btn-ghost" id="choosePasteImportBtn" style="margin-bottom:8px;">📋 명렬표 붙여넣기로 추가</button>
+      <button class="btn btn-ghost" id="chooseExcelImportBtn">📄 엑셀 파일로 한번에 추가</button>
     </div>
+  </div>
+</div>
+
+<!-- 붙여넣기로 명단 추가 시트 -->
+<div class="overlay" id="pasteOverlay">
+  <div class="sheet" style="max-height:94vh;">
+    <div class="sheet-handle"></div>
+    <h2><span>붙여넣기로 추가</span><button class="close-x" data-close="pasteOverlay">✕</button></h2>
+
+    <div class="batch-hint" style="margin-top:0;margin-bottom:10px;">
+      엑셀이나 한글 문서의 명렬표를 복사해서 아래에 그대로 붙여넣으세요. 아래 두 형식을 자동으로 인식해요.<br><br>
+      <b>형식 1</b> (5자리 학번 + 이름)<br>
+      10701 김정식<br>
+      10702 김훈훈<br><br>
+      <b>형식 2</b> ("N학년 M반" 줄 + 번호 이름)<br>
+      1학년 7반<br>
+      1 김정식<br>
+      2 김훈훈
+    </div>
+
+    <label style="margin-top:0;">여기에 붙여넣기</label>
+    <textarea id="pasteInput" placeholder="여기에 명렬표를 붙여넣으세요" style="min-height:140px;font-family:monospace;"></textarea>
+
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="flex:1;">
+        <label style="margin-top:0;">번호만 있는 줄에 적용할 학년</label>
+        <select id="pasteFallbackGrade">
+          <option value="1">1학년</option>
+          <option value="2">2학년</option>
+          <option value="3">3학년</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label style="margin-top:0;">반</label>
+        <input type="text" id="pasteFallbackClass" inputmode="numeric" placeholder="예: 7">
+      </div>
+    </div>
+    <div class="batch-hint" style="margin-top:4px;">※ "N학년 M반" 줄이 붙여넣은 텍스트에 있으면 그 값이 우선 적용되고, 5자리 학번(예: 10701)도 자체적으로 학년·반·번호를 계산해요. 위 학년/반은 번호만 있고 둘 다 없는 줄에만 사용돼요.</div>
+
+    <label>인식 결과 미리보기</label>
+    <div id="pastePreview" style="max-height:32vh;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);padding:8px;font-size:13px;"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" data-close="pasteOverlay">닫기</button>
+      <button class="btn btn-primary" id="pasteImportBtn">이 명단 추가</button>
+    </div>
+    <div style="text-align:center;font-size:11.5px;color:var(--ink-soft);margin-top:6px;" id="pasteImportedCount"></div>
   </div>
 </div>
 
@@ -1153,7 +1213,7 @@ function classKey(s){
 }
 
 const $ = (sel) => document.querySelector(sel);
-const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay','consolidateOverlay'];
+const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay','consolidateOverlay','pasteOverlay'];
 
 function showToast(msg){
   const t = $('#toast');
@@ -1431,6 +1491,10 @@ $('#chooseManualAddBtn').addEventListener('click', ()=>{
 $('#chooseExcelImportBtn').addEventListener('click', ()=>{
   closeOverlay('addChoiceOverlay');
   openExcelImportSheet();
+});
+$('#choosePasteImportBtn').addEventListener('click', ()=>{
+  closeOverlay('addChoiceOverlay');
+  openPasteImportSheet();
 });
 
 $('#resetAllBtn').addEventListener('click', async ()=>{
@@ -2107,6 +2171,123 @@ function colLetter(idx){
   return s;
 }
 
+// ---------- 붙여넣기로 명단 추가 ----------
+function openPasteImportSheet(){
+  $('#pasteInput').value = '';
+  $('#pastePreview').innerHTML = '<div style="color:var(--ink-soft);">여기에 붙여넣으면 자동으로 인식된 학생 목록이 표시돼요.</div>';
+  $('#pasteImportedCount').textContent = '';
+  if(activeFilter !== 'all'){
+    const [g,c] = activeFilter.split('-');
+    $('#pasteFallbackGrade').value = g;
+    $('#pasteFallbackClass').value = c;
+  } else {
+    $('#pasteFallbackGrade').value = '1';
+    $('#pasteFallbackClass').value = '';
+  }
+  openOverlay('pasteOverlay');
+}
+
+// 붙여넣은 텍스트를 파싱해서 {grade, classNum, rollNum, name, ok, raw} 배열로 변환
+function parsePastedRoster(text, fallbackGrade, fallbackClassNum){
+  const headerRegex = /(\d)\s*학년\s*(\d{1,2})\s*반/;
+  const lines = text.split(/\r?\n/);
+  let curGrade = null, curClassNum = null;
+  const results = [];
+
+  lines.forEach(rawLine=>{
+    const line = rawLine.trim();
+    if(!line) return;
+
+    const headerMatch = line.match(headerRegex);
+    // 줄 전체가 "N학년 M반" 헤더로만 이루어져 있으면 컨텍스트만 갱신하고 넘어감
+    if(headerMatch && line.replace(headerRegex, '').trim().length <= 2){
+      curGrade = parseInt(headerMatch[1], 10);
+      curClassNum = parseInt(headerMatch[2], 10);
+      return;
+    }
+
+    // "번호(또는 학번)  이름" 형태 파싱 - 탭/여러 칸 공백 모두 구분자로 인정
+    const tokens = line.split(/[\t\s]+/).filter(Boolean);
+    if(tokens.length < 2) return;
+
+    const firstToken = tokens[0].replace(/[^0-9]/g, '');
+    const name = tokens.slice(1).join(' ').trim();
+    if(!firstToken || !name) return;
+
+    let grade, classNum, rollNum;
+    if(firstToken.length === 5){
+      // 5자리 학번: 학년(1) + 반(2) + 번호(2)
+      grade = parseInt(firstToken[0], 10);
+      classNum = parseInt(firstToken.slice(1, 3), 10);
+      rollNum = parseInt(firstToken.slice(3, 5), 10);
+    } else {
+      // 번호만 있는 경우: 현재 헤더 컨텍스트 또는 fallback 학년/반 사용
+      rollNum = parseInt(firstToken, 10);
+      grade = curGrade || fallbackGrade;
+      classNum = curClassNum || fallbackClassNum;
+    }
+
+    const ok = !!(grade && classNum && rollNum && name);
+    results.push({ grade, classNum, rollNum, name, ok, raw: line });
+  });
+
+  return results;
+}
+
+function renderPastePreview(){
+  const text = $('#pasteInput').value;
+  const fallbackGrade = parseInt($('#pasteFallbackGrade').value, 10);
+  const fallbackClassNum = parseInt($('#pasteFallbackClass').value.trim(), 10) || null;
+  const parsed = parsePastedRoster(text, fallbackGrade, fallbackClassNum);
+  const wrap = $('#pastePreview');
+
+  if(parsed.length === 0){
+    wrap.innerHTML = '<div style="color:var(--ink-soft);">인식된 줄이 없어요. 형식을 확인해주세요.</div>';
+    return;
+  }
+
+  const okCount = parsed.filter(p=>p.ok).length;
+  const badCount = parsed.length - okCount;
+  let html = `<div style="margin-bottom:6px;font-weight:600;">${okCount}명 인식됨${badCount > 0 ? ` · ${badCount}줄 확인 필요` : ''}</div>`;
+  parsed.forEach(p=>{
+    if(p.ok){
+      html += `<div style="padding:3px 0;">${p.grade}학년 ${p.classNum}반 ${p.rollNum}번 · ${escapeHtml(p.name)}</div>`;
+    } else {
+      html += `<div style="padding:3px 0;color:var(--danger);">⚠ 인식 실패: "${escapeHtml(p.raw)}"</div>`;
+    }
+  });
+  wrap.innerHTML = html;
+}
+
+$('#pasteInput').addEventListener('input', renderPastePreview);
+$('#pasteFallbackGrade').addEventListener('change', renderPastePreview);
+$('#pasteFallbackClass').addEventListener('input', renderPastePreview);
+
+$('#pasteImportBtn').addEventListener('click', async ()=>{
+  const text = $('#pasteInput').value;
+  const fallbackGrade = parseInt($('#pasteFallbackGrade').value, 10);
+  const fallbackClassNum = parseInt($('#pasteFallbackClass').value.trim(), 10) || null;
+  const parsed = parsePastedRoster(text, fallbackGrade, fallbackClassNum).filter(p=>p.ok);
+
+  if(parsed.length === 0){
+    showToast('추가할 학생이 없어요');
+    return;
+  }
+
+  let added = 0, skipped = 0;
+  parsed.forEach(p=>{
+    const exists = roster.some(s => s.grade===p.grade && s.classNum===p.classNum && s.rollNum===p.rollNum);
+    if(exists){ skipped++; return; }
+    roster.push({ id: uid(), grade: p.grade, classNum: p.classNum, rollNum: p.rollNum, name: p.name, photo: null });
+    added++;
+  });
+
+  await saveRoster();
+  render();
+  $('#pasteImportedCount').textContent = `${added}명 추가됨${skipped > 0 ? ` · ${skipped}명 건너뜀(중복)` : ''}`;
+  showToast(`${added}명 추가했어요`);
+});
+
 function openExcelImportSheet(){
   excelWorkbook = null;
   excelSheetData = [];
@@ -2471,6 +2652,47 @@ $('#splashScreen').addEventListener('click', ()=>{
     $('#mainApp').classList.add('reveal');
   }, 650);
 });
+
+// 시작 화면 방문자 집계 - Google Apps Script(Ben 소유의 구글 시트) 기준으로 실제 방문자 수를 집계
+// 아래 URL을 배포된 Apps Script 웹 앱 주소로 바꿔야 작동해요. 설정 전까지는 이 기기 기준 로컬 집계로 대체돼요.
+const VISIT_COUNTER_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+(function updateVisitStats(){
+  const today = todayStr();
+  const el = $('#splashStats');
+
+  function showLocalFallback(){
+    try{
+      const key = STORAGE_PREFIX + 'visitStats';
+      const raw = localStorage.getItem(key);
+      let stats = raw ? JSON.parse(raw) : { total: 0, todayDate: '', todayCount: 0 };
+      if(stats.todayDate !== today){
+        stats.todayDate = today;
+        stats.todayCount = 0;
+      }
+      stats.todayCount = (stats.todayCount || 0) + 1;
+      stats.total = (stats.total || 0) + 1;
+      localStorage.setItem(key, JSON.stringify(stats));
+      if(el) el.innerHTML = `오늘 <b>${stats.todayCount}</b> · 전체 <b>${stats.total}</b> (이 기기 기준)`;
+    }catch(e){
+      console.error('local visit fallback failed', e);
+    }
+  }
+
+  if(!VISIT_COUNTER_URL || VISIT_COUNTER_URL.indexOf('YOUR_APPS_SCRIPT') === 0){
+    showLocalFallback();
+    return;
+  }
+
+  fetch(VISIT_COUNTER_URL)
+    .then(r => r.json())
+    .then(data => {
+      if(el) el.innerHTML = `오늘 <b>${data.today}</b> · 전체 <b>${data.total}</b>`;
+    })
+    .catch(()=>{
+      showLocalFallback();
+    });
+})();
 
 // 시작 화면에 타오르는 재(불씨) 입자 효과
 (function spawnEmbers(){
