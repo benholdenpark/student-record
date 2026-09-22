@@ -703,6 +703,65 @@
     padding:30px 10px;
   }
 
+  /* 학생 관계도 */
+  .rel-node{
+    position:absolute;
+    transform:translate(-50%, -50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    z-index:1;
+    width:56px;
+  }
+  .rel-node-circle{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:var(--paper-2);
+    border:2px solid var(--coral);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--coral);
+    flex-shrink:0;
+  }
+  .rel-node-circle img{width:100%;height:100%;object-fit:cover;}
+  .rel-node-label{
+    font-size:10.5px;
+    margin-top:3px;
+    color:var(--ink);
+    white-space:nowrap;
+    text-shadow:0 1px 3px rgba(0,0,0,0.9);
+    font-weight:600;
+  }
+  .rel-pair{
+    border:none;
+    background:none;
+    width:100%;
+    text-align:left;
+    padding:0;
+    cursor:pointer;
+  }
+  .rel-pair summary{
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+    padding:9px 0;
+    list-style:none;
+  }
+  .rel-pair summary::-webkit-details-marker{display:none;}
+  .rel-pair summary::before{content:'▸ ';color:var(--coral);}
+  .rel-pair[open] summary::before{content:'▾ ';}
+  .rel-count{
+    color:var(--ink-soft);
+    font-weight:500;
+    font-size:12px;
+  }
+
   .toast{
     position:fixed;
     left:50%;
@@ -860,7 +919,8 @@
 <header>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
     <h1 id="titleRefresh" style="cursor:pointer;">📕 심판의 노트</h1>
-    <div style="display:flex;gap:6px;flex-shrink:0;">
+    <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+      <button id="relationshipBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🔗 관계도</button>
       <button id="consolidateBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
       <button id="resetAllBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
     </div>
@@ -895,6 +955,20 @@
       <button class="btn btn-ghost" id="copyConsolidatedBtn">📋 복사하기</button>
       <button class="btn btn-primary" id="downloadConsolidatedBtn">⬇️ 텍스트 파일로 저장</button>
     </div>
+  </div>
+</div>
+
+<!-- 학생 관계도 -->
+<div class="overlay" id="relationshipOverlay">
+  <div class="sheet" style="max-height:92vh;">
+    <div class="sheet-handle"></div>
+    <h2><span>관계도</span><button class="close-x" data-close="relationshipOverlay">✕</button></h2>
+    <div class="batch-hint" style="margin-top:0;margin-bottom:12px;" id="relationshipScope">기록 내용에 다른 학생 이름이 함께 언급되면 자동으로 연결선을 그려요.</div>
+
+    <div id="relationshipDiagram" style="position:relative;width:100%;max-width:340px;aspect-ratio:1;margin:0 auto 18px;"></div>
+
+    <label style="margin-top:0;">발견된 관계</label>
+    <div id="relationshipList" style="max-height:34vh;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -1213,7 +1287,7 @@ function classKey(s){
 }
 
 const $ = (sel) => document.querySelector(sel);
-const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay','consolidateOverlay','pasteOverlay'];
+const overlayIds = ['studentOverlay','detailOverlay','noteOverlay','batchOverlay','addChoiceOverlay','excelOverlay','consolidateOverlay','pasteOverlay','relationshipOverlay'];
 
 function showToast(msg){
   const t = $('#toast');
@@ -1889,6 +1963,122 @@ $('#downloadConsolidatedBtn').addEventListener('click', ()=>{
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('파일로 저장했어요');
+});
+
+// ---------- 학생 관계도: 기록 내용에 다른 학생 이름이 함께 언급되면 연결 ----------
+function computeRelationships(){
+  const scopeStudents = roster.filter(s => activeFilter === 'all' || classKey(s) === activeFilter);
+  const edgesMap = new Map(); // key: 정렬된 두 id 조합 -> {a, b, count, items:[]}
+
+  scopeStudents.forEach(owner=>{
+    const ownerNotes = notes[owner.id] || [];
+    if(ownerNotes.length === 0) return;
+
+    // 이름 오인식을 줄이기 위해 같은 반 학생만, 2글자 미만 이름은 제외
+    const classmates = scopeStudents.filter(s =>
+      s.id !== owner.id && classKey(s) === classKey(owner) && s.name.length >= 2
+    );
+    if(classmates.length === 0) return;
+
+    ownerNotes.forEach(note=>{
+      classmates.forEach(mate=>{
+        if(note.content.includes(mate.name)){
+          const key = [owner.id, mate.id].sort().join('|');
+          if(!edgesMap.has(key)){
+            edgesMap.set(key, { a: owner.id, b: mate.id, count: 0, items: [] });
+          }
+          const edge = edgesMap.get(key);
+          edge.count++;
+          edge.items.push({
+            ownerName: owner.name,
+            mentionedName: mate.name,
+            date: note.date,
+            time: note.time,
+            content: note.content
+          });
+        }
+      });
+    });
+  });
+
+  return Array.from(edgesMap.values());
+}
+
+function renderRelationshipView(){
+  const scopeLabel = activeFilter === 'all'
+    ? '전체'
+    : (()=>{ const [g,c] = activeFilter.split('-'); return `${g}학년 ${c}반`; })();
+  $('#relationshipScope').textContent = `${scopeLabel} 기준 · 기록 내용에 다른 학생 이름이 함께 언급되면 자동으로 연결선을 그려요.`;
+
+  const edges = computeRelationships();
+  const diagramEl = $('#relationshipDiagram');
+  const listEl = $('#relationshipList');
+
+  if(edges.length === 0){
+    diagramEl.innerHTML = '';
+    listEl.innerHTML = '<div class="no-notes">아직 포착된 관계가 없어요</div>';
+    return;
+  }
+
+  const nodeIds = Array.from(new Set(edges.flatMap(e => [e.a, e.b])));
+  const nodes = nodeIds.map(id => roster.find(s => s.id === id)).filter(Boolean);
+  const n = nodes.length;
+  const cx = 50, cy = 50, r = n <= 2 ? 24 : 38;
+  const pos = {};
+  nodes.forEach((s, i)=>{
+    const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+    pos[s.id] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  const maxCount = Math.max(...edges.map(e => e.count));
+  let svgLines = '';
+  edges.forEach(e=>{
+    const p1 = pos[e.a], p2 = pos[e.b];
+    if(!p1 || !p2) return;
+    const strokeWidth = (0.4 + (e.count / maxCount) * 0.9).toFixed(2);
+    const opacity = (0.35 + (e.count / maxCount) * 0.55).toFixed(2);
+    svgLines += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#C9A227" stroke-width="${strokeWidth}" stroke-opacity="${opacity}" />`;
+  });
+
+  let nodesHtml = '';
+  nodes.forEach(s=>{
+    const p = pos[s.id];
+    nodesHtml += `
+      <div class="rel-node" style="left:${p.x}%;top:${p.y}%;">
+        <div class="rel-node-circle">${s.photo ? `<img src="${s.photo}">` : initials(s.name)}</div>
+        <div class="rel-node-label">${escapeHtml(s.name)}</div>
+      </div>
+    `;
+  });
+
+  diagramEl.innerHTML = `
+    <svg viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%;">${svgLines}</svg>
+    ${nodesHtml}
+  `;
+
+  const sortedEdges = edges.slice().sort((a, b) => b.count - a.count);
+  listEl.innerHTML = sortedEdges.map(e=>{
+    const sa = roster.find(s => s.id === e.a);
+    const sb = roster.find(s => s.id === e.b);
+    if(!sa || !sb) return '';
+    const itemsHtml = e.items.map(it => `
+      <div class="note-item" style="margin-bottom:6px;">
+        <div class="note-meta"><span>${formatDate(it.date)} ${it.time || ''} · ${escapeHtml(it.ownerName)}의 기록</span></div>
+        <div class="note-content">${escapeHtml(it.content)}</div>
+      </div>
+    `).join('');
+    return `
+      <details class="rel-pair">
+        <summary>${escapeHtml(sa.name)} ↔ ${escapeHtml(sb.name)} <span class="rel-count">(${e.count}건)</span></summary>
+        <div style="margin-top:4px;">${itemsHtml}</div>
+      </details>
+    `;
+  }).join('');
+}
+
+$('#relationshipBtn').addEventListener('click', ()=>{
+  renderRelationshipView();
+  openOverlay('relationshipOverlay');
 });
 
 // ---------- Batch photo assignment (PDF/이미지에서 얼굴 잘라 배정) ----------
