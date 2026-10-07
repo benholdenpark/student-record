@@ -103,6 +103,33 @@
     color:#fff;
   }
 
+  /* 메인 화면 도구 버튼 줄 (헤더 밖이라 스크롤하면 같이 올라감) */
+  .tool-row{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:8px;
+    padding:12px 14px 0;
+  }
+  .tool-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    min-width:0;
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 4px;
+    font-family:inherit;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    white-space:nowrap;
+    cursor:pointer;
+  }
+  .tool-btn:active{background:var(--coral-soft);border-color:var(--coral);}
+  .tool-ico{font-size:15px;line-height:1;}
+
   .grid{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
@@ -672,6 +699,48 @@
     0%,100%{opacity:0.5;}
     50%{opacity:1;}
   }
+  /* 시작 화면 입구 버튼 (타이틀 연출이 끝나면 나타남, 화면을 누르면 바로 나타남) */
+  .splash-entry{
+    margin:34px auto 0;
+    width:min(260px,100%);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(8px);
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  .splash-entry.ready{opacity:1;pointer-events:auto;transform:none;}
+  /* 시작 화면에서 급식으로 들어왔을 때: 학생 화면은 숨기고 급식 팝업만 보여줌 */
+  body.meal-mode #mainApp > header,
+  body.meal-mode #mainApp > .tool-row,
+  body.meal-mode #grid,
+  body.meal-mode #emptyState,
+  body.meal-mode .fab,
+  body.meal-mode .batch-fab{display:none !important;}
+  .entry-btn{
+    font-family:'Noto Serif KR',serif;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:2px;
+    padding:14px 10px;
+    border-radius:12px;
+    cursor:pointer;
+    text-shadow:0 2px 4px rgba(0,0,0,0.6);
+  }
+  .entry-btn:active{transform:scale(0.97);}
+  .entry-record{
+    background:rgba(139,26,26,0.88);
+    border:1px solid #a01414;
+    color:#fff;
+    box-shadow:0 0 18px rgba(160,20,20,0.45);
+  }
+  .entry-meal{
+    background:rgba(20,12,8,0.55);
+    border:1px solid rgba(201,162,39,0.55);
+    color:#E6C65A;
+  }
   #mainApp{
     opacity:0;
   }
@@ -941,7 +1010,10 @@
       <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="splash-title" filter="url(#dripFilter)">심판의 노트</text>
     </svg>
     <div class="splash-tagline">이 노트에 적히는 순간, 기록은 시작된다</div>
-    <div class="splash-hint">화면을 눌러 입장하세요</div>
+    <div class="splash-entry" id="splashEntry">
+      <button type="button" class="entry-btn entry-record" id="enterRecordBtn">📕 학생 기록</button>
+      <button type="button" class="entry-btn entry-meal" id="enterMealBtn">🍱 오늘의 급식</button>
+    </div>
     <div class="splash-stats" id="splashStats"></div>
   </div>
 </div>
@@ -951,10 +1023,7 @@
 <header>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
     <h1 id="titleRefresh" style="cursor:pointer;">📕 심판의 노트</h1>
-    <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
-      <button id="mealBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🍱 급식</button>
-      <button id="relationshipBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🔗 관계도</button>
-      <button id="consolidateBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">📋 기록 통합</button>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
       <button id="resetAllBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
     </div>
   </div>
@@ -965,6 +1034,11 @@
   </div>
   <div class="filter-chips" id="classFilters"></div>
 </header>
+
+<div class="tool-row">
+  <button type="button" class="tool-btn" id="relationshipBtn"><span class="tool-ico">🔗</span><span>관계도</span></button>
+  <button type="button" class="tool-btn" id="consolidateBtn"><span class="tool-ico">📋</span><span>기록 통합</span></button>
+</div>
 
 <div id="grid" class="grid"></div>
 <div id="emptyState" class="empty" style="display:none;">
@@ -1353,11 +1427,16 @@ function showToast(msg){
   showToast._timer = setTimeout(()=>t.classList.remove('show'), 1600);
 }
 
+let mealFromSplash = false; // 시작 화면에서 급식으로 들어왔는지
 function openOverlay(id){
   $('#'+id).classList.add('show');
 }
 function closeOverlay(id){
   $('#'+id).classList.remove('show');
+  if(id === 'mealOverlay' && mealFromSplash){
+    mealFromSplash = false;
+    $('#splashScreen').classList.remove('hide'); // 입구 화면으로 돌아감
+  }
 }
 document.querySelectorAll('[data-close]').forEach(btn=>{
   btn.addEventListener('click', ()=>closeOverlay(btn.dataset.close));
@@ -2140,7 +2219,7 @@ $('#relationshipBtn').addEventListener('click', ()=>{
 // ---------- 급식: 나이스 공식 데이터 + 직접 올린 사진 (학생 기록과 완전히 분리해서 저장) ----------
 const MEAL_SCHOOL = { office:'B10', code:'7021125' };
 // 브라우저에서 나이스를 바로 못 부르는 환경일 때만 쓰는 중계 주소(Apps Script 웹앱 주소). 비워두면 쓰지 않아요.
-const MEAL_PROXY = 'https://script.google.com/macros/s/AKfycbzm7Ic0Q0IE54ibKXMoQrYfZZZhKRXwu9txXTBA8_bpHELL54oLubN1vJPH7AzsDu_b6w/exec';
+const MEAL_PROXY = '';
 const MEAL_ALLERGY = {
   1:'난류',2:'우유',3:'메밀',4:'땅콩',5:'대두',6:'밀',7:'고등어',8:'게',9:'새우',10:'돼지고기',
   11:'복숭아',12:'토마토',13:'아황산류',14:'호두',15:'닭고기',16:'쇠고기',17:'오징어',18:'조개류',19:'잣'
@@ -2285,7 +2364,7 @@ async function renderMealView(){
   const d = new Date(mealDate + 'T00:00:00');
   label.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
   label.classList.toggle('preview', mealDate !== todayStr());
-  $('#mealToday').style.visibility = mealDate === todayStr() ? 'hidden' : 'visible';
+  $('#mealToday').style.display = mealDate === todayStr() ? 'none' : '';
 
   const body = $('#mealBody');
   body.innerHTML = '<div class="no-notes">불러오는 중…</div>';
@@ -2311,12 +2390,6 @@ async function renderMealView(){
   });
 }
 
-$('#mealBtn').addEventListener('click', ()=>{
-  mealDate = todayStr();
-  pruneMealStorage();
-  openOverlay('mealOverlay');
-  renderMealView();
-});
 $('#mealPrev').addEventListener('click', ()=>{ mealDate = shiftDateStr(mealDate, -1); renderMealView(); });
 $('#mealNext').addEventListener('click', ()=>{ mealDate = shiftDateStr(mealDate, 1); renderMealView(); });
 $('#mealToday').addEventListener('click', ()=>{ mealDate = todayStr(); renderMealView(); });
@@ -3106,12 +3179,29 @@ $('#titleRefresh').addEventListener('click', ()=>{
   location.reload();
 });
 
-$('#splashScreen').addEventListener('click', ()=>{
+function enterRecord(){
+  document.body.classList.remove('meal-mode');
   $('#splashScreen').classList.add('hide');
   setTimeout(()=>{
     $('#mainApp').classList.add('reveal');
   }, 650);
+}
+function enterMeal(){
+  mealFromSplash = true;
+  mealDate = todayStr();
+  pruneMealStorage();
+  document.body.classList.add('meal-mode');
+  $('#mainApp').classList.add('reveal'); // 급식 팝업이 메인 화면 안쪽에 있어서 필요
+  $('#splashScreen').classList.add('hide');
+  openOverlay('mealOverlay');
+  renderMealView();
+}
+// 연출이 끝나기 전에 화면을 누르면 입구 버튼을 바로 보여줌
+$('#splashScreen').addEventListener('click', ()=>{
+  $('#splashEntry').classList.add('ready');
 });
+$('#enterRecordBtn').addEventListener('click', (e)=>{ e.stopPropagation(); enterRecord(); });
+$('#enterMealBtn').addEventListener('click', (e)=>{ e.stopPropagation(); enterMeal(); });
 
 // 시작 화면 방문자 집계 - Google Apps Script(Ben 소유의 구글 시트) 기준으로 실제 방문자 수를 집계
 // Apps Script는 다른 도메인에서의 fetch 요청에 CORS 헤더를 주지 않으므로 JSONP 방식으로 우회
@@ -3230,6 +3320,8 @@ const VISIT_COUNTER_URL = 'https://script.google.com/macros/s/AKfycbzZ3n8xEgV1hJ
   const flashEl = document.querySelector('.reveal-flash');
   if(logoEl) logoEl.style.animationDelay = titleDelay + 's';
   if(flashEl) flashEl.style.animationDelay = titleDelay + 's';
+  const entryEl = document.getElementById('splashEntry');
+  if(entryEl) setTimeout(()=> entryEl.classList.add('ready'), (titleDelay + 1.2) * 1000);
 })();
 
 loadData();
