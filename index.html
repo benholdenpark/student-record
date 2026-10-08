@@ -2348,7 +2348,7 @@ function parseMealRow(row){
   const lines = (s)=> String(s || '').split(/<br\s*\/?>/i).map(x=>x.trim()).filter(Boolean);
   const dishes = lines(row.DDISH_NM).map(line=>{
     const m = line.match(/^(.*?)\s*\(([\d.]+)\)\s*$/);
-    const name = (m ? m[1] : line).replace(/[*]+$/, '').trim();
+    const name = (m ? m[1] : line).replace(/&amp;/g, '&').replace(/[*]+$/, '').trim();
     const allergy = m ? m[2].split('.').map(Number).filter(n=>MEAL_ALLERGY[n]) : [];
     return { name, allergy };
   });
