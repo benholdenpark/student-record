@@ -832,7 +832,7 @@
   }
 
   /* 급식 */
-  .meal-nav{display:flex;align-items:center;gap:6px;margin-bottom:12px;}
+  .meal-nav{display:flex;align-items:center;gap:6px;margin-bottom:0;}
   .meal-nav-btn{
     background:var(--paper-2);border:1px solid var(--line);color:var(--ink-soft);
     border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;flex-shrink:0;
@@ -840,12 +840,12 @@
   .meal-today{font-size:12px;font-weight:700;color:var(--coral);}
   .meal-date{flex:1;text-align:center;font-weight:700;font-size:15px;}
   .meal-date.preview{color:var(--coral);}
-  .meal-kcal{color:var(--coral);font-weight:800;font-size:13px;margin-bottom:8px;}
+  .meal-kcal{color:var(--coral);font-weight:800;font-size:15px;margin-bottom:10px;}
   .meal-dishes{list-style:none;padding:0;margin:0 0 12px;}
-  .meal-dishes li{font-size:16px;font-weight:600;line-height:1.55;padding:2px 0;}
+  .meal-dishes li{font-size:20px;font-weight:600;line-height:1.6;padding:3px 0;}
   .meal-dishes li::before{content:'•';color:var(--coral);margin-right:8px;}
   .meal-dishes .alg{font-size:10px;color:var(--danger);vertical-align:super;margin-left:2px;font-weight:700;}
-  .meal-info{font-size:12px;line-height:1.55;color:var(--ink-soft);margin-top:8px;}
+  .meal-info{font-size:13px;line-height:1.6;color:var(--ink-soft);margin-top:10px;}
   .meal-info b{color:var(--ink);font-weight:700;margin-right:4px;}
   .meal-info.alg-line{color:var(--danger);}
   .meal-photo{margin-top:14px;}
@@ -861,6 +861,83 @@
   .meal-retry{
     margin-top:10px;background:var(--paper-2);border:1px solid var(--line);color:var(--ink);
     border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+
+  /* 급식: 팝업이 아니라 학생 기록처럼 화면 전체를 쓰는 페이지 */
+  .overlay.meal-page{
+    background:var(--paper);
+    align-items:stretch;
+    transition:opacity .25s ease;
+  }
+  .overlay.meal-page .sheet.meal-sheet{
+    max-height:none;
+    height:100%;
+    border-radius:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    transform:none;
+  }
+  .meal-topbar{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    background:var(--navy-deep);
+    padding:calc(14px + env(safe-area-inset-top)) 14px 12px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.15);
+  }
+  .meal-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:18px;
+    font-weight:700;
+    color:#fff;
+  }
+  .meal-back{
+    background:none;
+    border:1px solid rgba(200,90,90,0.3);
+    color:#B8A79C;
+    font-size:12px;
+    border-radius:14px;
+    padding:5px 12px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .meal-topbar-space{width:78px;flex-shrink:0;}
+  .meal-sheet .meal-nav{flex-shrink:0;padding:12px 14px 10px;}
+  .meal-sheet .meal-nav-btn{padding:10px 16px;font-size:14px;}
+  .meal-sheet .meal-date{font-size:18px;}
+  .meal-scroll{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:6px 16px 20px;
+  }
+  .meal-content{display:block;}
+  .meal-actions{
+    flex-shrink:0;
+    display:flex;
+    gap:8px;
+    padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);
+    background:var(--paper);
+  }
+  .meal-actions .btn{padding:14px;}
+  /* 태블릿·PC처럼 넓은 화면: 메뉴와 사진을 나란히 */
+  @media (min-width:720px){
+    .meal-content{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:28px;
+      align-items:start;
+      max-width:1000px;
+      margin:0 auto;
+    }
+    .meal-photo{margin-top:0;}
+    .meal-dishes li{font-size:24px;}
   }
 
   .toast{
@@ -1024,6 +1101,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
     <h1 id="titleRefresh" style="cursor:pointer;">📕 심판의 노트</h1>
     <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="homeBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🏠 처음으로</button>
       <button id="resetAllBtn" style="background:none;border:1px solid rgba(200,90,90,0.3);color:#B8A79C;font-size:11px;border-radius:14px;padding:4px 10px;cursor:pointer;white-space:nowrap;">🗑 전체 초기화</button>
     </div>
   </div>
@@ -1079,11 +1157,14 @@
   </div>
 </div>
 
-<!-- 급식 -->
-<div class="overlay" id="mealOverlay">
-  <div class="sheet" style="max-height:92vh;">
-    <div class="sheet-handle"></div>
-    <h2><span>🍱 급식</span><button class="close-x" data-close="mealOverlay">✕</button></h2>
+<!-- 급식 (전체 화면 페이지) -->
+<div class="overlay meal-page" id="mealOverlay">
+  <div class="sheet meal-sheet">
+    <div class="meal-topbar">
+      <button type="button" class="meal-back" data-close="mealOverlay">‹ 처음으로</button>
+      <div class="meal-title">🍱 오늘의 급식</div>
+      <span class="meal-topbar-space"></span>
+    </div>
 
     <div class="meal-nav">
       <button type="button" class="meal-nav-btn" id="mealPrev" aria-label="이전 날짜">◀</button>
@@ -1092,10 +1173,10 @@
       <button type="button" class="meal-nav-btn meal-today" id="mealToday">오늘</button>
     </div>
 
-    <div id="mealBody" style="max-height:58vh;overflow-y:auto;"></div>
+    <div id="mealBody" class="meal-scroll"></div>
 
     <input type="file" id="mealPhotoInput" accept="image/*" style="display:none;">
-    <div class="btn-row">
+    <div class="meal-actions">
       <a class="btn btn-ghost" id="mealSchoolLink" href="https://dongguk.sen.ms.kr/75702/subMenu.do" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">학교 급식 페이지 ↗</a>
       <button type="button" class="btn btn-primary" id="mealPhotoBtn">📷 사진 올리기</button>
     </div>
@@ -2378,7 +2459,7 @@ async function renderMealView(){
     if(seq !== mealSeq) return;
     menuHtml = `<div class="no-notes">급식 정보를 불러오지 못했어요<br><span style="font-size:11.5px;">인터넷 연결을 확인하고 다시 시도해 주세요</span><br><button type="button" class="meal-retry" id="mealRetry">다시 시도</button></div>`;
   }
-  body.innerHTML = menuHtml + renderMealPhoto(mealDate);
+  body.innerHTML = `<div class="meal-content"><div class="meal-menu">${menuHtml}</div><div class="meal-side">${renderMealPhoto(mealDate)}</div></div>`;
 
   const retry = $('#mealRetry');
   if(retry) retry.addEventListener('click', renderMealView);
@@ -3200,6 +3281,14 @@ function enterMeal(){
 $('#splashScreen').addEventListener('click', ()=>{
   $('#splashEntry').classList.add('ready');
 });
+function goHome(){
+  document.body.classList.remove('meal-mode');
+  $('#mainApp').classList.remove('reveal');
+  $('#splashEntry').classList.add('ready');
+  $('#splashScreen').classList.remove('hide');
+  window.scrollTo(0, 0);
+}
+$('#homeBtn').addEventListener('click', goHome);
 $('#enterRecordBtn').addEventListener('click', (e)=>{ e.stopPropagation(); enterRecord(); });
 $('#enterMealBtn').addEventListener('click', (e)=>{ e.stopPropagation(); enterMeal(); });
 
