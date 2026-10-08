@@ -2425,6 +2425,7 @@ function pruneMealStorage(){
 }
 
 // ---------- 급식 사진 (전자칠판 서버에서 받아옴) ----------
+let mealPhotoDebug = '';
 function mealPhotoFrameHtml(inner){
   return `<div class="meal-photo"><div class="meal-photo-frame" id="mealPhotoFrame">${inner}</div></div>`;
 }
@@ -2447,24 +2448,39 @@ async function fetchMealPhotoUrl(dateStr){
   const timer = setTimeout(()=>ctrl.abort(), 12000);
   let body;
   try{
-    const res = await fetch(`${MEAL_PHOTO_API}?${q}`, { cache:'no-store', signal: ctrl.signal });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    body = await res.json();
+    let res;
+    try{ res = await fetch(`${MEAL_PHOTO_API}?${q}`, { cache:'no-store', signal: ctrl.signal }); }
+    catch(e){ throw new Error(e && e.name === 'AbortError' ? '시간 초과' : '네트워크/접근 차단(CORS)'); }
+    if(!res.ok) throw new Error('서버 응답 ' + res.status);
+    try{ body = await res.json(); }catch(e){ throw new Error('JSON 아님'); }
   }finally{
     clearTimeout(timer);
   }
-  if(!body || !body.ok) throw new Error('응답 오류');
+  if(!body || !body.ok) throw new Error('응답 오류: ' + String(body && (body.error || body.message) || 'ok 아님').slice(0,60));
 
   const ph = body.data && body.data.photo;
-  let url = (ph && ph.ok && typeof ph.value === 'string') ? ph.value.trim() : '';
-  if(url && !/^https?:\/\//i.test(url)) url = ''; // 웹 주소가 아니면 쓰지 않음
+  // 값이 문자열이 아니어도(객체·배열) 안에서 이미지 주소를 찾는다
+  const pick = v => {
+    if(!v) return '';
+    if(typeof v === 'string') return v.trim();
+    if(Array.isArray(v)){ for(const x of v){ const r = pick(x); if(r) return r; } return ''; }
+    if(typeof v === 'object'){ for(const k of ['url','src','value','link','image']){ const r = pick(v[k]); if(r) return r; } }
+    return '';
+  };
+  let url = ph ? pick(ph.value !== undefined ? ph.value : ph) : '';
+  if(url && !/^https?:\/\//i.test(url)){
+    if(/^data:image\//i.test(url)) { /* 그대로 사용 */ }
+    else if(url.charAt(0) === '/') url = new URL(MEAL_PHOTO_API).origin + url;
+    else url = '';
+  }
+  if(ph && !url) mealPhotoDebug = '사진 필드: ' + JSON.stringify(ph).slice(0,120);
   lsSet(cacheKey, JSON.stringify({ url, at: Date.now() }));
   return url;
 }
 
 function mealPhotoFallback(img){
   const frame = img && img.parentNode;
-  if(frame) frame.innerHTML = '<div class="meal-photo-empty">사진을 불러오지 못했어요</div>';
+  if(frame) frame.innerHTML = '<div class="meal-photo-empty">사진 파일을 열지 못했어요<br><span style="font-size:10px;word-break:break-all;opacity:.7;">' + escapeHtml((img.getAttribute('src')||'').slice(0,160)) + '</span></div>';
 }
 
 async function loadMealPhoto(dateStr, seq){
@@ -2473,16 +2489,17 @@ async function loadMealPhoto(dateStr, seq){
   frame.innerHTML = '<div class="meal-photo-empty">사진 불러오는 중…</div>';
   let html;
   try{
+    mealPhotoDebug = '';
     const url = await fetchMealPhotoUrl(dateStr);
     if(seq !== mealSeq) return;
     html = url
       ? `<img src="${escapeHtml(url)}" alt="급식 사진" onerror="mealPhotoFallback(this)">`
-      : `<div class="meal-photo-empty">이 날은 등록된 급식 사진이 없어요</div>`;
+      : `<div class="meal-photo-empty">이 날은 등록된 급식 사진이 없어요${mealPhotoDebug ? `<br><span style="font-size:10px;word-break:break-all;opacity:.7;">${escapeHtml(mealPhotoDebug)}</span>` : ''}</div>`;
     const credit = $('#mealPhotoCredit');
     if(credit) credit.style.display = url ? 'block' : 'none';
   }catch(e){
     if(seq !== mealSeq) return;
-    html = `<div class="meal-photo-empty">사진 서버에 연결하지 못했어요<br><button type="button" class="meal-retry" id="mealPhotoRetry">다시 시도</button></div>`;
+    html = `<div class="meal-photo-empty">사진 서버에 연결하지 못했어요<br><span style="font-size:10.5px;opacity:.7;">${escapeHtml(e && e.message || '')}</span><br><button type="button" class="meal-retry" id="mealPhotoRetry">다시 시도</button></div>`;
   }
   const f = $('#mealPhotoFrame');
   if(!f) return;
