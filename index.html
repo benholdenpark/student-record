@@ -452,6 +452,16 @@
     margin-bottom:16px;
   }
   .quick-add-form textarea{width:100%;}
+  .phrase-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .phrase-chip{
+    background:var(--paper-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:16px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:inherit;line-height:1.2;
+  }
+  .phrase-chip:active{background:var(--line);}
+  .phrase-chip.tool{color:var(--ink-soft);font-weight:700;}
+  .phrase-chip.editing{border-style:dashed;}
+  .phrase-chip .x{color:var(--danger);margin-left:6px;font-weight:800;}
   .quick-add-form .btn-primary{background:var(--coral);color:#1A1410;font-weight:800;}
 
   .note-item{
@@ -537,7 +547,11 @@
   #splashScreen.hide{
     opacity:0;
     pointer-events:none;
+    visibility:hidden;
+    transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 1.3s;
   }
+  /* 사라진 시작 화면 안의 버튼이 학생 카드 터치를 가로채지 않도록 */
+  #splashScreen.hide, #splashScreen.hide *{pointer-events:none !important;}
   #splashScreen::before{
     content:'';
     position:absolute;
@@ -1405,6 +1419,7 @@
           <input type="date" id="quickNoteDate" style="flex:1;">
           <input type="time" id="quickNoteTime" style="flex:1;">
         </div>
+        <div class="phrase-row" id="phraseRow"></div>
         <textarea id="quickNoteContent" placeholder="특이사항을 바로 입력하세요" style="margin-top:8px;min-height:64px;"></textarea>
         <button class="btn btn-primary" id="quickSaveNoteBtn" style="width:100%;margin-top:8px;">＋ 저장</button>
       </div>
@@ -1539,6 +1554,7 @@ function closeOverlay(id){
   $('#'+id).classList.remove('show');
   if(id === 'mealOverlay' && mealFromSplash){
     mealFromSplash = false;
+    document.body.classList.remove('meal-mode');
     $('#splashScreen').classList.remove('hide'); // 입구 화면으로 돌아감
   }
 }
@@ -1889,6 +1905,7 @@ function openDetail(studentId){
   $('#quickNoteDate').value = todayStr();
   $('#quickNoteTime').value = nowStr();
   $('#quickNoteContent').value = '';
+  phraseEdit = false; renderPhrases();
   renderNotes();
   updateDetailSheetGlow();
   openOverlay('detailOverlay');
@@ -2024,6 +2041,61 @@ function todayStr(){
 function nowStr(){
   const d = new Date();
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+
+// ---------- 자주 쓰는 문구 (누르면 입력칸에 들어감) ----------
+const DEFAULT_PHRASES = ['수업 중 화장실감', '수업 중 취침'];
+let phraseEdit = false;
+function loadPhrases(){
+  try{
+    const a = JSON.parse(lsGet('phrases') || 'null');
+    if(Array.isArray(a)) return a.filter(x => typeof x === 'string' && x.trim());
+  }catch(e){}
+  return DEFAULT_PHRASES.slice();
+}
+function savePhrases(a){ lsSet('phrases', JSON.stringify(a)); }
+function renderPhrases(){
+  const row = $('#phraseRow');
+  if(!row) return;
+  const list = loadPhrases();
+  row.innerHTML = '';
+  list.forEach((t, i)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'phrase-chip' + (phraseEdit ? ' editing' : '');
+    b.textContent = t;
+    if(phraseEdit){
+      const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; b.appendChild(x);
+      b.addEventListener('click', ()=>{
+        const a = loadPhrases(); a.splice(i, 1); savePhrases(a); renderPhrases();
+      });
+    }else{
+      b.addEventListener('click', ()=>{
+        const ta = $('#quickNoteContent');
+        const cur = ta.value.trim();
+        ta.value = cur ? cur + ', ' + t : t;
+      });
+    }
+    row.appendChild(b);
+  });
+  if(phraseEdit){
+    const add = document.createElement('button');
+    add.type = 'button'; add.className = 'phrase-chip tool'; add.textContent = '＋ 문구 추가';
+    add.addEventListener('click', ()=>{
+      const v = (prompt('자주 쓰는 문구를 입력하세요') || '').trim();
+      if(!v) return;
+      const a = loadPhrases();
+      if(!a.includes(v)) a.push(v);
+      savePhrases(a); renderPhrases();
+    });
+    row.appendChild(add);
+  }
+  const tg = document.createElement('button');
+  tg.type = 'button'; tg.className = 'phrase-chip tool';
+  tg.textContent = phraseEdit ? '완료' : '✏️ 편집';
+  tg.addEventListener('click', ()=>{ phraseEdit = !phraseEdit; renderPhrases(); });
+  row.appendChild(tg);
 }
 
 $('#quickSaveNoteBtn').addEventListener('click', async ()=>{
